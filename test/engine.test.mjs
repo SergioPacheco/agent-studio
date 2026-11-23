@@ -1,0 +1,31 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {Engine} from '../lib/engine.mjs';
+function run(mode='live'){return {id:'test',prompt:'Build health',mode,status:'planning',files:{},events:[],agents:{},usage:{calls:0,tokens:0}};}
+function engine(runner=async()=>({code:0,output:'ok'})){return new Engine({persist:async()=>{},config:{models:{}},runner});}
+test('demo waits for both approvals and executes independent runner',async()=>{
+ let calls=0;const e=engine(async()=>{calls++;return {code:0,output:'pass'};}),r=run('demo');
+ await e.start(r);assert.equal(r.status,'awaiting_plan');assert.equal(calls,0);
+ await e.execute(r);assert.equal(r.status,'awaiting_files');assert.equal(calls,0);
+ await e.test(r);assert.equal(r.status,'completed');assert.equal(calls,1);
+});
+test('executor tool results feed next turn; reviewer sees separate context',async()=>{
+ const e=engine(),r=run();r.plan={tasks:[{agent:'chevron',title:'Build'}]};
+ let calls=0,reviewCalls=0;
+ e.model=async(_r,role,messages)=>{
+  if(role==='revisor'){reviewCalls++;assert.equal(messages.length,2);assert.ok(!messages.some(m=>m.role==='tool'));return {role:'assistant',content:'{"approved":true,"summary":"Reviewed","findings":[]}'};}
+  calls++;
+  if(calls===1)return {role:'assistant',tool_calls:[{id:'one',type:'function',function:{name:'write_file',arguments:JSON.stringify({path:'a.mjs',content:'export const a=1;'})}}]};
+  assert.equal(messages.at(-1).role,'tool');return {role:'assistant',content:'Done'};
+ };
+ await e.execute(r);assert.equal(r.files['a.mjs'],'export const a=1;');assert.equal(r.status,'awaiting_files');assert.equal(reviewCalls,1);
+});
+test('review failures stop after two correction rounds',async()=>{
+ const e=engine(),r=run();r.plan={tasks:[]};r.files={'a.mjs':'bad'};let fixes=0;
+ e.work=async()=>{fixes++;};e.model=async()=>({content:'{"approved":false,"findings":["bug"],"summary":"Reject"}'});
+ await e.execute(r);assert.equal(r.status,'review_failed');assert.equal(fixes,2);
+});
+test('test runner is blocked if artifact changed after review',async()=>{
+ const e=engine(()=>{throw new Error('must not run');}),r=run('demo');
+ await e.start(r);await e.execute(r);r.files['health.mjs']='changed';await e.test(r);assert.equal(r.status,'error');assert.match(r.error,/mudaram/);
+});
