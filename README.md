@@ -53,7 +53,7 @@ O sistema não baixa imagens durante os testes (\`--pull=never\`). Se Docker/ima
 | Scout | Investigar o projeto preparado | Somente ler; sem busca web |
 | Revisor | Avaliar objetivo e artefatos em contexto separado | Revisar; não modifica arquivos |
 
-Maestro seleciona tarefas e especialistas. Cada tarefa tem seu histórico separado. O executor pode escolher chamadas a ferramentas em até 8 rodadas por tarefa; resultados retornam ao modelo. O revisor recebe o objetivo e os artefatos, não o histórico do autor. Reprovações geram até duas rodadas de correção; após isso, o processo para.
+No modo IA, Chevron, Pixel e Scout primeiro propõem assumir ou passar, com justificativa. Maestro recebe as propostas e seleciona tarefas e especialistas. Cada tarefa tem seu histórico separado. O executor pode escolher chamadas a ferramentas em até 8 rodadas por tarefa; resultados retornam ao modelo. O revisor recebe o objetivo e os artefatos, não o histórico do autor. Reprovações geram até duas rodadas de correção; após isso, o processo para.
 
 O controlador executa as tarefas **sequencialmente**, respeitando dependências. Não há promessa de paralelismo. O plano tem até oito tarefas. Todos podem usar o mesmo modelo ou modelos diferentes no mesmo endpoint.
 

@@ -52,7 +52,7 @@ function renderContent(){
  }
  if(tab==='plan'){
   if(!current.plan)root.append(el('div','empty','Preparando o plano...'));
-  else{root.append(el('p','',current.plan.summary));for(const t of current.plan.tasks){const card=el('div','task',t.title);card.append(el('small','',t.agent+' · dependências: '+(t.dependsOn.join(', ')||'nenhuma')));root.append(card);}}
+  else{for(const p of current.proposals||[])root.append(el('p','',p.agent+' · '+(p.assume?'Assume: ':'Passa: ')+p.reason));root.append(el('p','',current.plan.summary));for(const t of current.plan.tasks){const card=el('div','task',t.title);card.append(el('small','',t.agent+' · dependências: '+(t.dependsOn.join(', ')||'nenhuma')));root.append(card);}}
  }
  if(tab==='files'){
   if(!Object.keys(current.files).length)root.append(el('div','empty','Nenhum arquivo preparado ainda.'));

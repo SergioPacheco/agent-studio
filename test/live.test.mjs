@@ -13,7 +13,8 @@ test('live protocol: model tools, separate review, approvals and Docker executio
  const provider=http.createServer(async(req,res)=>{
   let raw='';for await(const c of req)raw+=c;const b=JSON.parse(raw);modelCalls++;
   const sys=b.messages[0].content;let message;
-  if(sys.includes('Plan work'))message={role:'assistant',content:JSON.stringify({summary:'Build fixture',tasks:[{id:'health',agent:'chevron',title:'Implement health and tests',dependsOn:[]}]})};
+  if(sys.includes('Decide whether your specialty'))message={role:'assistant',content:JSON.stringify({assume:sys.includes('chevron'),reason:'Fixture proposal'})};
+  else if(sys.includes('Plan work'))message={role:'assistant',content:JSON.stringify({summary:'Build fixture',tasks:[{id:'health',agent:'chevron',title:'Implement health and tests',dependsOn:[]}]})};
   else if(sys.includes('Independently review'))message={role:'assistant',content:JSON.stringify({approved:true,summary:'Reviewed fixture',findings:[]})};
   else if(b.messages.some(m=>m.role==='tool'))message={role:'assistant',content:'Files prepared.'};
   else message={role:'assistant',tool_calls:Object.entries(DEMO_FILES).map(([path,content],i)=>({id:'write-'+i,type:'function',function:{name:'write_file',arguments:JSON.stringify({path,content})}}))};
@@ -30,7 +31,7 @@ test('live protocol: model tools, separate review, approvals and Docker executio
   await wait(id,'awaiting_plan');await post('/api/runs/'+id+'/approve-plan');
   const staged=await wait(id,'awaiting_files');assert.equal(staged.review.approved,true);assert.equal(staged.files['health.mjs'],DEMO_FILES['health.mjs']);
   await post('/api/runs/'+id+'/approve-files');
-  const done=await wait(id,'completed');assert.equal(done.test.code,0);assert.match(done.test.command,/--network=none/);assert.match(done.test.output,/health returns ok/);assert.equal(modelCalls,4);
+  const done=await wait(id,'completed');assert.equal(done.test.code,0);assert.match(done.test.command,/--network=none/);assert.match(done.test.output,/health returns ok/);assert.equal(modelCalls,7);
  }finally{
   if(child.exitCode===null){const exited=new Promise(resolve=>child.once('exit',resolve));child.kill('SIGTERM');await exited;}
   await new Promise(resolve=>provider.close(resolve));await rm(data,{recursive:true,force:true});
