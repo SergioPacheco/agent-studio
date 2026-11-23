@@ -1,0 +1,40 @@
+import {chromium} from 'playwright';
+import {spawn} from 'node:child_process';
+import {mkdtemp,rm,mkdir} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {setTimeout as delay} from 'node:timers/promises';
+import assert from 'node:assert/strict';
+const data=await mkdtemp(join(tmpdir(),'agent-studio-browser-'));
+const port=22500+Math.floor(Math.random()*500),base='http://127.0.0.1:'+port;
+const child=spawn(process.execPath,['server.mjs'],{env:{...process.env,PORT:String(port),STUDIO_DATA_DIR:data,AI_API_KEY:'',AI_MODEL:''},stdio:'ignore'});
+let browser;
+try{
+ let ready=false;for(let i=0;i<100;i++){try{if((await fetch(base+'/api/config')).ok){ready=true;break;}}catch{}await delay(40);}assert.ok(ready);
+ browser=await chromium.launch({headless:true});
+ const page=await browser.newPage({viewport:{width:1440,height:1000}});
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto(base);
+ await page.getByRole('button',{name:'Reunir o time'}).click();
+ await page.getByRole('button',{name:'Aprovar plano',exact:true}).waitFor();
+ await page.getByRole('tab',{name:'Plano',exact:true}).click();
+ await page.getByRole('button',{name:'Aprovar plano',exact:true}).click();
+ await page.getByRole('button',{name:'Aprovar arquivos e testar',exact:true}).waitFor();
+ await page.getByRole('tab',{name:'Arquivos & diff'}).click();
+ await page.getByText('health.mjs · novo arquivo',{exact:true}).click();
+ await page.getByRole('button',{name:'Aprovar arquivos e testar',exact:true}).click();
+ await page.locator('#status').filter({hasText:'Concluído'}).waitFor();
+ await page.getByRole('tab',{name:'Testes',exact:true}).click();
+ await page.getByText('✓ Testes passaram',{exact:true}).waitFor();
+ await mkdir('.studio/screenshots',{recursive:true});
+ await page.screenshot({path:'.studio/screenshots/desktop.png',fullPage:true});
+ await page.setViewportSize({width:390,height:844});
+ await page.screenshot({path:'.studio/screenshots/mobile.png',fullPage:true});
+ assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'No horizontal overflow on mobile');
+ assert.deepEqual(errors,[]);
+ console.log('Browser flow passed: approvals, diff, tests, desktop and mobile.');
+}finally{
+ await browser?.close();
+ if(child.exitCode===null){const exited=new Promise(resolve=>child.once('exit',resolve));child.kill('SIGTERM');await exited;}
+ await rm(data,{recursive:true,force:true});
+}

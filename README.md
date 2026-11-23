@@ -91,7 +91,9 @@ npm run check
 npm test
 ~~~
 
-GitHub Actions verifica sintaxe e executa testes de regras, ferramentas, revisão e ciclo HTTP completo com testes reais do fixture, persistência e bloqueio de origem externa. O CI também testa o protocolo de IA com um provedor HTTP simulado e execução real em Docker. Testes automatizados não chamam provedores pagos. **A integração live precisa de validação com suas credenciais; não é declarada verificada só pelo CI.**
+GitHub Actions verifica sintaxe e executa testes de regras, ferramentas, revisão e ciclo HTTP completo com testes reais do fixture, persistência e bloqueio de origem externa. O CI verifica a interface em Chromium: envio, duas aprovações, diff, resultado de testes e ausência de overflow horizontal em tela de 390 px; salva capturas desktop/mobile. Playwright é instalado somente para essa verificação, não para executar o app.
+
+O CI também testa o protocolo de IA com um provedor HTTP simulado e execução real em Docker. Testes automatizados não chamam provedores pagos. **A integração live precisa de validação com suas credenciais; não é declarada verificada só pelo CI.**
 
 ## Apresentação em 3 minutos
 
