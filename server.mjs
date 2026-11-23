@@ -1,5 +1,5 @@
 import http from 'node:http';
-import {readFile,writeFile,mkdir,readdir,rename,lstat} from 'node:fs/promises';
+import {readFile,writeFile,mkdir,readdir,rename} from 'node:fs/promises';
 import {resolve,join,dirname} from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
