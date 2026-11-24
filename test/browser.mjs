@@ -11,17 +11,17 @@ const child=spawn(process.execPath,['server.mjs'],{env:{...process.env,PORT:Stri
 let browser,page;
 try{
  let ready=false;for(let i=0;i<100;i++){try{if((await fetch(base+'/api/config')).ok){ready=true;break;}}catch{}await delay(40);}assert.ok(ready);
- browser=await chromium.launch({headless:true,...(process.env.CHROMIUM_PATH?{executablePath:process.env.CHROMIUM_PATH}:{})});
+ browser=await chromium.launch({headless:true,args:['--enable-webgl','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader'],...(process.env.CHROMIUM_PATH?{executablePath:process.env.CHROMIUM_PATH}:{})});
  page=await browser.newPage({viewport:{width:1440,height:1000}});
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto(base);
- await page.locator('#agents .robot-svg').first().waitFor();
- assert.equal(await page.locator('#agents .robot-svg').count(),5);
+ await page.locator('#agents .avatar-shell').first().waitFor();
+ assert.equal(await page.locator('#agents .avatar-canvas').count(),5);await page.locator('#agents .has-webgl').first().waitFor();assert.equal(await page.locator('#agents .has-webgl').count(),5);
  assert.equal(await page.locator('#visual-metrics .metric-card').count(),4);
  await mkdir('.studio/screenshots',{recursive:true});
  await page.screenshot({path:'.studio/screenshots/welcome.png',fullPage:true});
  await page.getByRole('button',{name:'Pausar animações'}).click();
- assert.equal(await page.locator('.robot-body').first().evaluate(n=>getComputedStyle(n).animationPlayState),'paused');
+ assert.equal(await page.locator('body').getAttribute('class'),'motion-paused');
  await page.getByRole('button',{name:'Ativar animações'}).click();
  await page.getByRole('button',{name:'Reunir o time'}).click();
  await page.getByRole('button',{name:'Aprovar plano',exact:true}).waitFor();
@@ -29,7 +29,7 @@ try{
  await page.getByRole('button',{name:'Aprovar plano',exact:true}).click();
  await page.getByRole('button',{name:'Aprovar arquivos e testar',exact:true}).waitFor();
  await page.getByRole('tab',{name:'Arquivos & diff'}).click();
- await page.getByText('health.mjs · novo arquivo',{exact:true}).click();
+ await page.locator('summary').filter({hasText:'health.mjs · novo arquivo'}).click();
  await page.getByRole('button',{name:'Aprovar arquivos e testar',exact:true}).click();
  await page.locator('#status').filter({hasText:'Concluído'}).waitFor();
  await page.getByRole('tab',{name:'Testes',exact:true}).click();
@@ -47,6 +47,18 @@ try{
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'No horizontal overflow on mobile');
  await page.emulateMedia({reducedMotion:'reduce'});
  assert.equal(await page.locator('.robot-body').first().evaluate(n=>getComputedStyle(n).animationName),'none');
+ await page.getByRole('button',{name:'Agentes',exact:true}).click();
+ await page.getByRole('button',{name:'+ Novo agente',exact:true}).click();
+ await page.locator('#agent-form [name="name"]').fill('Especialista QA');
+ await page.locator('#agent-form [name="role"]').fill('Qualidade especializada');
+ await page.getByRole('button',{name:'Salvar agente',exact:true}).click();
+ await page.locator('#settings-error').filter({hasText:'Agente salvo'}).waitFor();
+ await page.getByRole('button',{name:'Fechar configurações'}).click();
+ assert.equal(await page.locator('#agents .avatar-shell').count(),6);
+ await page.getByRole('button',{name:'Conversas',exact:true}).click();
+ await page.locator('#chat-agent').selectOption('revisor');
+ assert.equal(await page.locator('#chat-agent').inputValue(),'revisor');
+ await page.getByRole('button',{name:'Fechar configurações'}).click();
  assert.deepEqual(errors,[]);
  console.log('Browser flow passed: approvals, diff, tests, desktop and mobile.');
 }catch(e){

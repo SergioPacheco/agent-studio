@@ -1,6 +1,6 @@
 {
   "name": "agent-studio",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -10,6 +10,36 @@
     "start": "node --env-file-if-exists=.env server.mjs",
     "dev": "node --watch --env-file-if-exists=.env server.mjs",
     "test": "node --test test/*.test.mjs",
-    "check": "node --check server.mjs && node --check lib/engine.mjs && node --check public/app.js && node --check public/visuals.js"
+    "check": "node scripts/check.mjs",
+    "desktop": "electron .",
+    "desktop:pack": "electron-builder --linux AppImage"
+  },
+  "main": "desktop/main.cjs",
+  "description": "Est\u00fadio visual multiagente com CLI, projetos, voz e desktop",
+  "author": "Sergio Pacheco",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "45.4.1",
+    "electron-builder": "26.18.0"
+  },
+  "build": {
+    "appId": "dev.sergiopacheco.agentstudio",
+    "productName": "Agent Studio",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "desktop/**",
+      "lib/**",
+      "public/**",
+      "server.mjs",
+      "package.json",
+      "LICENSE"
+    ],
+    "linux": {
+      "target": "AppImage",
+      "category": "Development"
+    },
+    "asar": false
   }
 }

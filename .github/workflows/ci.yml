@@ -7,7 +7,7 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -18,7 +18,7 @@ jobs:
       - run: npm test
         env:
           RUN_DOCKER_TESTS: '1'
-      - run: npm install --no-save --package-lock=false playwright
+      - run: npm install --no-save --omit=dev --package-lock=false playwright
       - run: npx playwright install --with-deps chromium
       - run: node test/browser.mjs
       - uses: actions/upload-artifact@v4
@@ -28,3 +28,14 @@ jobs:
           path: .studio/screenshots/
           include-hidden-files: true
           if-no-files-found: ignore
+  desktop-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - run: sudo apt-get update && sudo apt-get install -y xvfb libgtk-3-0 libnss3 libgbm1 libasound2t64
+      - run: xvfb-run -a npm run desktop -- --smoke-test

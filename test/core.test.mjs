@@ -2,13 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {safePath,stageFile,validatePlan,fingerprint,diffFiles,parseJSON} from '../lib/core.mjs';
 test('blocks traversal, absolute paths and unsafe file types',()=>{
- for(const p of ['../secret','/tmp/a.mjs','a/../../x.js','a\\x.js','.env','a.sh','a//b.js','a/./b.js'])assert.throws(()=>safePath(p));
+ for(const p of ['../secret','/tmp/a.mjs','a/../../x.js','a\\x.js','.env','a.exe','secret.pem','a//b.js','a/./b.js'])assert.throws(()=>safePath(p));
  assert.equal(safePath('src/health.mjs'),'src/health.mjs');
 });
 test('enforces file and workspace budgets',()=>{
  assert.throws(()=>stageFile({},'x.mjs','x'.repeat(100001)));
- let files={};for(let i=0;i<30;i++)files=stageFile(files,i+'.mjs','');
- assert.throws(()=>stageFile(files,'31.mjs',''));
+ let files={};for(let i=0;i<250;i++)files=stageFile(files,i+'.mjs','');
+ assert.throws(()=>stageFile(files,'251.mjs',''));
  assert.equal(stageFile(files,'0.mjs','updated')['0.mjs'],'updated');
 });
 test('plan cannot invent roles, duplicate IDs or cyclic dependencies',()=>{

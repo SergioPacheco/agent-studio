@@ -1,143 +1,160 @@
 # Agent Studio ✳
 
-Estúdio visual de agentes para o exercício **REA is back — IA e Produtividade**. Uma implementação original inspirada no Estúdio descrito por Fernando Nogueira, com ideias de especialistas persistentes do OpenDots e visualização de atividade do Pixel Agents. Não é uma cópia da implementação interna desses projetos.
+Estúdio multiagente inspirado no [post de Fernando Nogueira](https://www.linkedin.com/feed/update/urn:li:activity:7521330422434246656/), implementado para a atividade **REA is back**. Um pedido reúne especialistas, produz propostas, gera um plano, executa tarefas, revisa o código e pede sua decisão sobre os arquivos e comandos.
 
-## Veja a aplicação
+## Começar
 
-Capturas reais da execução demonstrativa verificada pelo CI:
+**Node.js 22+**. O servidor web não precisa de bibliotecas npm em produção.
 
-![Estúdio com personagens, mapa do time e gráficos](docs/screenshots/desktop.webp)
-
-[Ver versão para celular](docs/screenshots/mobile.webp) · [Ver estado inicial](docs/screenshots/welcome.webp)
-
-## Interface visual
-
-- Cinco personagens vetoriais originais com volume, braços articulados, expressões, acessórios e animações por estado.
-- Seleção do personagem ou nó do mapa abre seus últimos eventos no inspetor lateral.
-- Grafo do time: linhas discretas mostram coordenação prevista; linhas coloridas mostram mudanças de responsável observadas em eventos consecutivos. **Não representa mensagens diretas que o servidor não registrou.**
-- Barras mostram contagem de eventos por agente; cartões mostram arquivos, eventos, chamadas e tokens informados.
-- Anel mostra tarefas realmente concluídas no plano. Revisão, aprovação e testes têm indicadores separados; completar tarefas não equivale a passar nos testes.
-- Controle para pausar animações, navegação por teclado e suporte a movimento reduzido.
-- No modo demo todos esses gráficos usam o cenário fixo identificado. No modo IA usam os eventos do provedor e das ferramentas.
-
-Os personagens são SVG animado com aparência de volume (2.5D), não modelos WebGL tridimensionais. Não é necessário baixar assets externos.
-
-## Iniciar
-
-Requisito: **Node.js 22 ou superior**. Nenhuma dependência npm para instalar.
-
-~~~sh
+```sh
 git clone https://github.com/SergioPacheco/agent-studio.git
 cd agent-studio
-npm start
-~~~
-
-Abra **http://127.0.0.1:5173**. O servidor escuta somente em loopback.
-
-### Demonstração sem credenciais
-
-1. Escolha **Demonstração • cenário fixo** e clique em **Reunir o time**.
-2. Abra Plano e aprove a distribuição de tarefas.
-3. Confira Arquivos & diff e a revisão demonstrativa.
-4. Aprove arquivos e testes.
-5. Confira a saída real de \`node --test\` e exporte as evidências.
-
-O modo demo **não usa LLM e não interpreta pedidos livres**. Produz sempre um módulo health, documentação e um teste fixo confiável. Os eventos correspondem às etapas reais da aplicação; decisões e revisão são programadas. Não confundir com execução multiagente por IA.
-
-### Modo real com IA
-
-~~~sh
 cp .env.example .env
-~~~
-
-Configure \`AI_API_KEY\`, \`AI_MODEL\` e, se necessário, \`AI_BASE_URL\`. O endpoint deve implementar **Chat Completions com function tools**, no formato compatível OpenAI. Credenciais permanecem no servidor. Modelos por papel podem ser definidos pelas variáveis \`AI_MODEL_MAESTRO\`, \`AI_MODEL_CHEVRON\`, \`AI_MODEL_PIXEL\`, \`AI_MODEL_SCOUT\`, \`AI_MODEL_REVISOR\`.
-
-Reinicie o servidor. O modo IA será habilitado. As assinaturas de interfaces de chat não são automaticamente credenciais de API; custos e limites dependem do provedor escolhido.
-
-Para executar **testes de código gerado**, instale Docker e prepare a imagem:
-
-~~~sh
-docker pull node:22-alpine
 npm start
-~~~
+```
 
-O sistema não baixa imagens durante os testes (\`--pull=never\`). Se Docker/imagem estiverem ausentes, a execução informa erro; não há fallback para executar código gerado diretamente no host.
+Abra **http://127.0.0.1:5173**. O demo não precisa de credenciais: gera um projeto health fixo e executa um teste real. O demo **não interpreta pedidos livres nem chama modelos**. Seus estados e gráficos descrevem esse cenário programado, claramente identificado.
 
-## Equipe
+## Usar assinaturas existentes: Claude + Codex + Gemini
 
-| Agente | Responsabilidade | Permissões |
-| --- | --- | --- |
-| Maestro | Plano, distribuição e síntese de estado | Planejar; não edita arquivos |
-| Chevron | Back-end e correções | Ler e preparar arquivos |
-| Pixel | Interface | Ler e preparar arquivos |
-| Scout | Investigar o projeto preparado | Somente ler; sem busca web |
-| Revisor | Avaliar objetivo e artefatos em contexto separado | Revisar; não modifica arquivos |
+A configuração inicial escolhe **Claude Code CLI** para Maestro, Chevron e Pixel; **Gemini CLI** para Scout; **Codex CLI** para Revisor. Instale e autentique as ferramentas oficiais no seu terminal. A aplicação não pede, copia ou gerencia suas senhas de login.
 
-No modo IA, Chevron, Pixel e Scout primeiro propõem assumir ou passar, com justificativa. Maestro recebe as propostas e seleciona tarefas e especialistas. Cada tarefa tem seu histórico separado. O executor pode escolher chamadas a ferramentas em até 8 rodadas por tarefa; resultados retornam ao modelo. O revisor recebe o objetivo e os artefatos, não o histórico do autor. Reprovações geram até duas rodadas de correção; após isso, o processo para.
+- [Claude Code: configuração e autenticação](https://code.claude.com/docs/en/setup)
+- [Codex CLI](https://github.com/openai/codex)
+- [Gemini CLI](https://github.com/google-gemini/gemini-cli)
 
-O controlador executa as tarefas **sequencialmente**, respeitando dependências. Não há promessa de paralelismo. O plano tem até oito tarefas. Todos podem usar o mesmo modelo ou modelos diferentes no mesmo endpoint.
+No painel **Provedores**, confira a detecção; em **Agentes**, escolha provedor e modelo de cada especialista. Campo de modelo vazio usa o padrão da CLI. Use versões recentes: os adaptadores dependem dos modos headless estruturados e dos controles de ferramentas documentados. A presença de um executável **não comprova login, saldo, quota ou direito de uso pela assinatura**. Faça uma chamada pequena para verificar sua conta.
 
-## Fluxo e critérios de aceite
+As CLIs são chamadas por processo, com argumentos separados, entrada por stdin, contexto de conversa próprio e diretório temporário neutro. Ferramentas nativas/MCP são desabilitadas ou restringidas; o modelo solicita as ferramentas da aplicação por um envelope JSON. O aplicativo executa apenas ferramentas autorizadas para aquele agente. Sem `--yolo`, sem bypass de sandbox e sem autenticação automatizada. Codex usa modo read-only e ignora configurações de projeto/usuário; Gemini recebe um arquivo de configurações com allowlist vazia de ferramentas e MCP. Versões incompatíveis falham com erro visível; não há fallback silencioso para API paga.
 
-- Pedido único pelo painel, com modo explicitamente identificado.
-- Plano estruturado e aprovação humana antes de executar.
-- Estados e eventos transmitidos por SSE.
-- Chamadas reais de ferramentas no modo IA.
-- Revisão independente do contexto do executor.
-- Arquivos preparados e diff antes da aprovação final.
-- Testes executados pelo sistema após a última edição aprovada.
-- Histórico persistente, cancelamento e exportação JSON.
-- Erros de provedor e testes ficam visíveis; nenhuma resposta falsa de sucesso.
-- Layout responsivo e respeito a preferência por movimento reduzido.
+Variáveis de chaves dos provedores são esvaziadas nos subprocessos CLI para evitar selecionar acidentalmente cobrança por API. Os logins existentes das próprias ferramentas continuam sob responsabilidade delas. Limites e políticas da assinatura são os do fornecedor. Em Windows, prefira WSL ou configure `STUDIO_*_CLI` para um executável nativo real; shims `.cmd` não são invocados por shell.
 
-Estados: planejamento → aguardando plano → execução → revisão → aguardando arquivos → testes → conclusão/falha. Reiniciar durante execução marca o trabalho como interrompido; inicie outro pedido. Nenhuma retomada automática de efeitos incertos.
+### APIs opcionais e múltiplos provedores
 
-## Workspace, testes e limites
+Além das três CLIs, há adaptadores de **Chat Completions compatível OpenAI, Anthropic Messages e Gemini generateContent**. Crie o provedor no painel, com URL base e **nome** da variável da chave; defina seu valor no `.env` do servidor e reinicie. Nenhuma chave é retornada à interface ou gravada no catálogo.
 
-Artefatos são novos projetos independentes salvos em \`.studio/artifacts/<id>\`. O sistema **não edita pastas arbitrárias nem importa seu repositório existente**. Como a origem é vazia, o diff apresenta novos arquivos. Não há ferramenta shell para o modelo. Até 30 arquivos, 100 KB por arquivo, 500 KB no conjunto. Extensões aceitas: mjs, js, json, html, css, md, txt.
+Exemplos de URLs base: `https://api.openai.com/v1`, `https://api.anthropic.com/v1`, `https://generativelanguage.googleapis.com/v1beta`. Selecione o modelo real disponível na sua conta. Um time pode misturar CLIs e APIs. Definir `AI_API_KEY` e `AI_MODEL` no primeiro início cria um provedor legado e associa os cinco agentes a ele, por compatibilidade com a versão inicial. Depois do primeiro início o catálogo salvo prevalece.
 
-Testes gerados precisam ser arquivos \`*.test.mjs\` na raiz, sem dependências externas. Docker executa Node sem rede, sem privilégios, com filesystem somente leitura, limites de CPU/memória/PIDs e timeout. A pasta de artefatos é montada somente para leitura. Isso reduz exposição; containers compartilham o kernel do host e não equivalem a uma VM.
+## Funcionalidades do post
 
-No demo apenas o fixture fixo conferido por hash é executado diretamente no host. Testes aprovados não provam ausência de bugs. O revisor não afirma ter executado testes.
+| Funcionalidade | Implementação |
+| --- | --- |
+| Mascotes com função e personalidade | Modelos **3D reais em WebGL**, gerados por código, com perspectiva, iluminação, juntas e expressões; cor e forma editáveis. SVG identificado como fallback se WebGL faltar. |
+| Um pedido para o time | Campo principal; Maestro recebe objetivo, memória aprovada e contexto da conversa selecionada. |
+| Rodada de propostas | Cada especialista indica se assume ou passa e justifica. O coordenador recebe as propostas. |
+| Sequência ou paralelo | Plano com dependências e reservas de arquivos; scheduler até três tarefas independentes em paralelo, ou modo sequencial. |
+| Trabalho nas pastas dos projetos | Cadastro de pasta existente, leitura do snapshot, alterações preparadas, aplicação dos arquivos selecionados na pasta original, backup e detecção de conflitos. |
+| Aprovação de comandos sensíveis | Cartão com comando/argumentos, motivo, imagem e escopo. Só a decisão explícita libera execução; comandos propostos rodam em snapshot Docker isolado. |
+| Revisão linha por linha | Diff com linhas removidas/adicionadas, arquivos novos/excluídos, seleção por arquivo e revisão em contexto separado com ferramenta somente leitura. |
+| Criar e editar agentes no painel | Nome, papel, função, instruções, personalidade, provedor, modelo, cor, mascote e permissões; até 12 agentes. |
+| Uso de assinaturas | Adaptadores oficiais de CLI; APIs opcionais, nunca usadas como fallback oculto. |
+| Pesquisa com fontes | Scout pode pesquisar na web e ler URLs públicas; fontes e trechos aparecem no painel. Falhas são exibidas, sem evidência inventada. |
+| Aplicação desktop | Electron com servidor local próprio, isolamento de contexto e seleção nativa de pastas. |
+| Voz | Ditado nativo do navegador ou transcrição local Whisper; leitura de respostas por síntese de voz do sistema. |
+| Histórico e conversas separadas | Conversas persistentes por agente/projeto, histórico de execuções e continuação da conversa de equipe selecionada. |
+| Memória do projeto | Regras/notas editáveis; sugestões do agente precisam de aprovação antes de virar memória persistente. Não treina o modelo. |
+| Plano aprovado antes de alterar arquivos | Aprovação do plano antes da execução e do diff antes de modificar a pasta original. |
+| Testes ao final | O sistema testa os arquivos aprovados; falhas podem voltar para correção/revisão, com limite de duas tentativas. |
+| Commit e deploy automático | Commit dos arquivos aplicados, push opcional explícito e workflow de deploy à VPS após CI aprovado. Ativação depende da configuração da sua VPS. |
 
-O app é local, de usuário único, sem autenticação. Não o exponha por proxy público. Valida Host e Origin, renderiza texto sem HTML de modelos e limita tipos/tamanho/caminhos. Pedidos e artefatos do modo IA são enviados ao endpoint configurado. \`.env\` e \`.studio\` não entram no Git. Não grave segredos nas tarefas.
+## Projetos existentes
 
-**Fora do escopo:** múltiplos endpoints/provedores simultâneos, voz, Slack, navegador remoto, MCP, mascotes WebGL modelados em 3D, edição colaborativa, retry automático após falha de testes e execução paralela. Os mascotes são vetores SVG originais animados por CSS, com volume visual. As conclusões sobre capacidades dos agentes não dependem das animações.
+Abra **Projetos**, informe nome/pasta e configure o comando de testes como uma lista JSON, por exemplo `["npm","test"]`, `["mvn","test"]` ou `["node","--test"]`. No desktop há seletor nativo de pasta. Escolha o projeto no pedido principal e use o modo IA; o demo é sempre isolado para não sobrescrever seu projeto com o fixture.
 
-## Verificação
+O modelo recebe a lista de arquivos e lê conteúdos por ferramenta. São aceitos arquivos fonte/texto, até 100 KB por arquivo, 250 arquivos e 4 MB por snapshot. Diretórios de dependências/build, links simbólicos, `.env` e nomes comuns de arquivos de credenciais não são enviados. A tela registra arquivos ignorados; selecionar uma subpasta ajuda em repositórios maiores. Isso não é um detector universal de segredos: escolha somente projetos e arquivos que possam ser enviados aos provedores configurados.
 
-~~~sh
+Tarefas com dependências, mesmo agente ou reservas de arquivos em comum são serializadas. Tarefas independentes podem trabalhar em paralelo. Alterações sem reservas usam controle otimista de conflitos: uma escrita concorrente incompatível interrompe o trabalho, em vez de substituir silenciosamente o resultado anterior. Cada tarefa tem histórico próprio; o revisor recebe objetivo, diff e acesso somente leitura aos arquivos.
+
+Ao aprovar o diff, o sistema confere se o projeto mudou desde a leitura. Aplica somente os arquivos escolhidos, salva backup e testa. Rejeitar um arquivo pode invalidar o conjunto: os testes mostram o resultado efetivo da seleção. **Restaurar último backup** também verifica alterações externas antes de restaurar; restaura arquivos de trabalho, sem apagar commits ou reescrever o histórico Git.
+
+### Testes e comandos
+
+Por padrão os testes de código gerado e os comandos propostos rodam em Docker:
+
+```sh
+docker pull node:22-alpine
+```
+
+Escolha uma imagem adequada em Projetos para outras stacks. A imagem precisa já existir; não é baixada automaticamente durante a execução. O container fica sem rede, sem capacidades, com filesystem somente leitura, pasta montada somente leitura e limites de CPU/memória/processos/tempo. Dependências precisam estar na imagem; não há instalação de pacotes pela rede nesse ambiente. Não equivale a uma VM.
+
+Projetos existentes também podem usar **testes na pasta original**, com suas dependências locais. A aprovação informa o comando e exige confirmação específica desse modo. Ele executa código do projeto com os privilégios do usuário; comandos de ferramentas propostos pelo modelo continuam isolados em Docker. As variáveis de ambiente com nomes comuns de credenciais são esvaziadas nos processos de testes no host. Testes aprovados não demonstram ausência de todos os bugs.
+
+Se um teste falhar, use **Corrigir falhas e revisar**: o executor recebe a saída real, passa novamente pelo revisor e aguarda nova aprovação do diff. Até duas correções de testes, além do limite de duas correções por rodada de revisão.
+
+### Git
+
+Após testes aprovados em projeto existente, **Criar commit / push** pede mensagem e decisão explícita sobre push. Inclui somente os arquivos aplicados pelo estúdio; arquivos de terceiros já staged são preservados fora do commit. Hooks Git podem rodar e a autenticação de push continua sendo a do seu Git. O push pode ativar o deploy do próprio repositório.
+
+## Pesquisa
+
+Sem chave de pesquisa, o servidor tenta resultados HTML públicos do DuckDuckGo. Sites podem negar requisições ou alterar o formato; nesses casos o erro aparece e o agente pode pedir uma URL. `BRAVE_SEARCH_API_KEY` habilita opcionalmente Brave Search. Leituras usam HTTP/HTTPS público com resolução DNS validada e conexão fixada ao endereço, bloqueio de redes internas/reservadas, redirecionamentos limitados, timeout e limite de conteúdo. Apenas IPv4 público é suportado.
+
+Páginas são texto de referência não confiável; não viram instruções de sistema. URLs, títulos e trechos ficam em **Fontes & memória**. A aplicação não inventa fontes quando a pesquisa falha.
+
+## Voz
+
+**Ditar** só começa após clique e permissão de microfone. O texto transcrito fica no campo para você revisar; não envia o pedido automaticamente. Navegadores com SpeechRecognition podem usar serviços de reconhecimento do fornecedor do navegador. **Ouvir respostas** usa a síntese de voz disponível no sistema; há controle para interromper.
+
+Para transcrição local em navegadores/Electron sem reconhecimento nativo, instale [Whisper](https://github.com/openai/whisper) e FFmpeg e configure:
+
+```dotenv
+STUDIO_STT_COMMAND=["whisper"]
+STUDIO_STT_MODEL=base
+```
+
+O servidor grava um áudio temporário, chama a CLI, lê seu JSON e remove os arquivos temporários. Modelos Whisper precisam estar disponíveis localmente. Sem mecanismo de reconhecimento disponível, o ditado fica desabilitado com explicação. Microfone e qualidade de voz dependem dos dispositivos/permissões; fixtures automatizados não substituem esse teste físico.
+
+## Desktop
+
+```sh
+npm ci
+npm run desktop
+```
+
+A janela Electron inicia um servidor em porta local livre e usa token interno que não é exposto ao renderer. Node integration desligado, context isolation e sandbox do renderer ligados. O preload expõe apenas seleção de pasta. A pasta de dados fica em `app.getPath('userData')/workspace`; `.env` pode ser colocado em `userData/.env` para o app instalado. No desenvolvimento, `.env` da raiz também é lido.
+
+Para gerar AppImage Linux:
+
+```sh
+npm run desktop:pack
+```
+
+O workflow manual **Build desktop application** também gera o instalador. O CI principal faz smoke test abrindo a janela com cinco agentes. O servidor web continua podendo rodar sem instalar Electron. Em sistemas sem aceleração gráfica o fallback SVG é identificado.
+
+## Deploy automático à VPS
+
+O workflow **Deploy verified commit to VPS** espera o workflow **Verify Agent Studio** terminar com sucesso em um push à main. Para ativar:
+
+1. Prepare VPS Linux com Node.js 22+, Git/rsync e uma conta sem privilégios administrativos para a aplicação.
+2. Instale uma primeira cópia em uma subpasta de `/home/SEU_USUARIO/`, crie `.env` e execute `node scripts/install-service.mjs`; siga os comandos de systemd exibidos. Habilite linger para o usuário se precisar manter o serviço após logout.
+3. Configure os secrets do repositório: `VPS_HOST`, `VPS_USER`, `VPS_PATH`, `VPS_SSH_KEY`, `VPS_KNOWN_HOSTS` (chave do host verificada fora do pipeline).
+4. Defina a variável de repositório `VPS_DEPLOY_ENABLED=true` e configure o environment `production` conforme sua política.
+
+O pipeline transfere o commit exato aprovado pelo CI e reinicia o serviço de usuário. `.env`, `.studio`, `.git` e `node_modules` são preservados/excluídos da sincronização. Chaves de host são verificadas; não há desativação da verificação SSH.
+
+O servidor permanece em loopback. Acesso por túnel SSH funciona sem exposição pública. Para proxy HTTPS público, defina `STUDIO_PUBLIC_ORIGIN` e um `STUDIO_AUTH_TOKEN` longo e aleatório: a interface exige login pelo token, usa cookie HttpOnly/SameSite e limita tentativas. Sem token a configuração pública é recusada. O app é de usuário único, não um serviço multi-tenant.
+
+**Nenhuma VPS real é criada ou acessada pelo código sem essa configuração.** Os secrets e a autenticação de fornecedores são seus; não os coloque no código nem envie por chat.
+
+## Verificação e limites de evidência
+
+```sh
 npm run check
 npm test
-~~~
+```
 
-GitHub Actions verifica sintaxe e executa testes de regras, ferramentas, revisão e ciclo HTTP completo com testes reais do fixture, persistência e bloqueio de origem externa. O CI verifica a interface em Chromium: envio, duas aprovações, diff, resultado de testes, cinco personagens, inspeção do agente, grafo, métricas, progresso de tarefas, pausa de animações, movimento reduzido e ausência de overflow horizontal em tela de 390 px; salva capturas desktop/mobile. Playwright é instalado somente para essa verificação, não para executar o app.
+Testes cobrem aplicação/restauração seletiva, conflitos, symlinks, memória, conversas separadas, commit sem incluir staged de terceiros, protocolos de três CLIs e três APIs, permissões, paralelismo, voz local por fixture e bloqueio de URLs internas. No CI também há Docker real, aprovação de comando, fluxo no Chromium/WebGL, criação de agente, layout móvel, movimento reduzido e smoke test Electron.
 
-O CI também testa o protocolo de IA com um provedor HTTP simulado e execução real em Docker. Testes automatizados não chamam provedores pagos. **A integração live precisa de validação com suas credenciais; não é declarada verificada só pelo CI.**
+Os provedores de IA e a transcrição usam fixtures nos testes automatizados; não há consumo de contas pagas. **Protocolos testados não significam autenticação real verificada.** Login e limites das suas CLIs, microfone/voz, pesquisa ao vivo e deploy da sua VPS precisam de validação no ambiente configurado. O erro real fica visível quando um desses serviços não está disponível.
 
-## Apresentação em 3 minutos
+Execuções, catálogo, memória e conversas são JSON com escrita temporária/rename em `.studio`. Reinício durante trabalho marca a execução como interrompida; não repete comandos automaticamente. Não há recuperação automática de efeitos externos incertos. Os logs contêm objetivos, código e saídas autorizadas: mantenha a pasta de dados privada.
 
-- 0:00 — explique que um pedido mobiliza especialistas e mostre o modo escolhido.
-- 0:30 — envie o pedido e aprove o plano.
-- 1:00 — acompanhe atividade e os arquivos produzidos.
-- 1:45 — confira revisão e aprove os artefatos.
-- 2:15 — mostre comando e saída dos testes.
-- 2:45 — explique memória persistente, contextos separados e limites.
+## Referências
 
-## Arquitetura
+- [Post original](https://www.linkedin.com/feed/update/urn:li:activity:7521330422434246656/)
+- [Claude CLI reference](https://code.claude.com/docs/en/cli-reference)
+- [Codex source and documentation](https://github.com/openai/codex)
+- [Gemini headless](https://geminicli.com/docs/cli/headless/)
+- [OpenDots](https://github.com/CopilotKit/OpenDots) e [Pixel Agents](https://github.com/pixel-agents-hq/pixel-agents): inspiração conceitual; sem cópia de código ou assets.
 
-Frontend HTML/CSS/JS → servidor Node HTTP/SSE → orquestrador → endpoint de modelo.
-Ferramentas atuam em mapa de arquivos preparado; exportação aprovada cria workspace por execução.
-Históricos e eventos ficam em JSON, persistidos por escrita temporária e rename.
-Docker executa testes gerados após aprovação.
-
-Referências conceituais:
-- [Post do Estúdio](https://www.linkedin.com/feed/update/urn:li:activity:7521330422434246656/)
-- [OpenDots](https://github.com/CopilotKit/OpenDots)
-- [Pixel Agents](https://github.com/pixel-agents-hq/pixel-agents)
-
-Código original, sem reutilização de código ou assets desses repositórios.
-
-## Licença
-
-MIT. Veja LICENSE.
+Código e modelos visuais originais. Licença MIT.

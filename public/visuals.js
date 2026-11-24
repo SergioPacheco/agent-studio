@@ -4,14 +4,14 @@ function html(tag,cls,text){const n=document.createElement(tag);n.className=cls;
 
 // Original vector characters. All markup below is application-owned, never model output.
 export function createMascot(agent){
- const id=agent.id,c=/^#[a-f0-9]{6}$/i.test(agent.color)?agent.color:'#a99aff';
+ const id=agent.id,shape=agent.visual||id,c=/^#[a-f0-9]{6}$/i.test(agent.color)?agent.color:'#a99aff';
  const accessory={
   maestro:'<path d="M58 42 54 18 71 29 84 12 96 29 113 18 109 42Z" fill="url(#gold)" stroke="#ffedb1" stroke-width="2"/><circle cx="84" cy="26" r="3" fill="#fff3cb"/>',
   chevron:'<path d="m64 71-10 9 10 9m40-18 10 9-10 9" fill="none" stroke="#ffe7cc" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>',
   pixel:'<rect x="60" y="22" width="43" height="14" rx="5" fill="#fff0b5"/><rect x="66" y="17" width="10" height="11" rx="3" fill="#ffe49a"/><rect x="86" y="17" width="10" height="11" rx="3" fill="#ffe49a"/>',
   scout:'<path d="m84 15 7 15 16 5-16 6-7 16-6-16-16-6 16-5Z" fill="#cffff4"/><circle cx="120" cy="35" r="3" fill="#baffeb"/>',
   revisor:'<path d="M126 94 145 102 143 121 126 133 110 121 108 102Z" fill="#a4dcff" stroke="#e3f6ff" stroke-width="2"/><path d="m117 112 6 6 12-13" fill="none" stroke="#234b82" stroke-width="4" stroke-linecap="round"/>'
- }[id]||'';
+ }[shape]||'';
  const markup=`<svg xmlns="${NS}" viewBox="0 0 170 190" role="img" aria-label="Personagem ${id}" class="robot-svg">
  <defs>
  <linearGradient id="shell-${id}" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff" stop-opacity=".85"/><stop offset=".18" stop-color="${c}"/><stop offset=".7" stop-color="${c}"/><stop offset="1" stop-color="#25213b"/></linearGradient>
@@ -52,15 +52,17 @@ export function summarize(run,agents){
 const coords={maestro:[300,59],chevron:[65,188],pixel:[220,188],scout:[380,188],revisor:[535,188]};
 function curve(from,to){const [x,y]=coords[from],[a,b]=coords[to];return `M${x} ${y} Q${(x+a)/2} ${(y+b)/2-43} ${a} ${b}`;}
 function graph(root,run,agents,data,selected,onSelect){
- const svg=node('svg',{viewBox:'0 0 600 245',role:'img','aria-label':'Grafo de mudanças de responsável observadas no histórico',class:'team-graph'});
+ const lead=agents.find(a=>a.kind==='coordinator')||agents.find(a=>a.id==='maestro')||agents[0];const peers=agents.filter(a=>a.id!==lead.id);coords[lead.id]=[300,50];for(const [i,a] of peers.entries())coords[a.id]=[[65,220,380,535][i%4],178+Math.floor(i/4)*110];
+ const height=80+Math.ceil(peers.length/4)*110+55;
+ const svg=node('svg',{viewBox:'0 0 600 '+height,role:'img','aria-label':'Grafo de mudanças de responsável observadas no histórico',class:'team-graph'});
  svg.append(node('title',{},'Conexões representam mudanças de responsável entre eventos consecutivos, não mensagens diretas entre agentes.'));
  const defs=node('defs'),marker=node('marker',{id:'graph-arrow',viewBox:'0 0 10 10',refX:28,refY:5,markerWidth:5,markerHeight:5,orient:'auto-start-reverse'});marker.append(node('path',{d:'M0 0 10 5 0 10Z',fill:'#b7a2fa'}));defs.append(marker);svg.append(defs);
  const base=node('g',{'aria-hidden':'true'});
- for(const a of agents.filter(a=>a.id!=='maestro'))base.append(node('path',{d:curve('maestro',a.id),class:'graph-base'}));svg.append(base);
+ for(const a of agents.filter(a=>a.id!==lead.id))base.append(node('path',{d:curve(lead.id,a.id),class:'graph-base'}));svg.append(base);
  const last=data.events.at(-1),prev=data.events.slice(0,-1).reverse().find(e=>e.agent!==last?.agent);
  const active=['planning','executing','reviewing','testing'].includes(run?.status);
  for(const link of data.links){
-  const live=active&&last?.agent===link.to&&prev?.agent===link.from;
+  const live=active&&run?.agents[last?.agent]==='working'&&last?.agent===link.to&&prev?.agent===link.from;
   const p=node('path',{d:curve(link.from,link.to),class:'graph-edge'+(live?' live':''),'marker-end':'url(#graph-arrow)','data-from':link.from,'data-to':link.to});
   p.append(node('title',{},`${link.from} → ${link.to}: ${link.count} mudança(s) de responsável`));svg.append(p);
  }
@@ -75,7 +77,7 @@ export function renderDashboard(run,agents,selected,onSelect){
  const data=summarize(run,agents),root=document.querySelector('#graph');if(!root)return;
  graph(root,run,agents,data,selected,onSelect);
  const metrics=document.querySelector('#visual-metrics');metrics.replaceChildren();
- for(const [value,label] of [[data.files,'Arquivos preparados'],[data.events.length,'Eventos registrados'],[run?.usage?.calls||0,'Chamadas ao modelo'],[run?.usage?.tokens||0,'Tokens informados']]){
+ for(const [value,label] of [[data.files,'Arquivos preparados'],[data.events.length,'Eventos registrados'],[run?.usage?.calls||0,'Chamadas ao modelo'],[run?.usage?.calls&& !run?.usage?.tokens?'—':run?.usage?.tokens||0,'Tokens informados']]){
   const card=html('div','metric-card');card.append(html('b','',String(value)),html('span','',label));metrics.append(card);
  }
  const chart=document.querySelector('#activity-chart');chart.replaceChildren();const max=Math.max(1,...Object.values(data.counts));

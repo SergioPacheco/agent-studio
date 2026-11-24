@@ -1,0 +1,21 @@
+name: Build desktop application
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - run: xvfb-run -a npm run desktop -- --smoke-test
+      - run: npm run desktop:pack
+      - uses: actions/upload-artifact@v4
+        with:
+          name: agent-studio-linux
+          path: release/*.AppImage
