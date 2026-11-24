@@ -1,5 +1,6 @@
 const $=s=>document.querySelector(s);
 let agents=[],runs=[],current=null,tab='activity',online=false;
+function ingest(r){const old=runs.find(x=>x.id===r.id);if(old&&old.events.length>r.events.length)return old;const i=runs.findIndex(x=>x.id===r.id);if(i<0)runs.unshift(r);else runs[i]=r;return r;}
 const labels={planning:'Planejando',awaiting_plan:'Aprovar plano',executing:'Executando',reviewing:'Revisando',awaiting_files:'Aprovar arquivos',testing:'Testando',completed:'Concluído',test_failed:'Testes falharam',review_failed:'Revisão não aprovada',error:'Erro',cancelled:'Cancelado',interrupted:'Interrompido'};
 const states={idle:'Disponível',working:'Trabalhando',done:'Concluído',waiting:'Aguardando',error:'Atenção'};
 function el(tag,cls,text){const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;}
@@ -78,7 +79,7 @@ function render(){
 async function refresh(){runs=await api('/api/runs');if(current)current=runs.find(r=>r.id===current.id)||current;else current=runs[0]||null;render();}
 $('#request').onsubmit=async e=>{
  e.preventDefault();notify('');$('#submit').disabled=true;
- try{current=await api('/api/runs',{method:'POST',body:JSON.stringify({mode:$('#mode').value,prompt:$('#prompt').value})});runs.unshift(current);tab='activity';document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('selected',b.dataset.tab===tab));render();}catch(e){notify(e);$('#submit').disabled=false;}
+ try{const created=await api('/api/runs',{method:'POST',body:JSON.stringify({mode:$('#mode').value,prompt:$('#prompt').value})});current=ingest(created);current=ingest(await api('/api/runs/'+created.id));tab='activity';document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('selected',b.dataset.tab===tab));render();}catch(e){notify(e);$('#submit').disabled=false;}
 };
 $('#example').onclick=()=>$('#prompt').value='Crie um módulo health que retorne status ok, com documentação e teste.';
 $('#mode').onchange=()=>$('#mode-note').textContent=$('#mode').value==='demo'?'Sem LLM: gera o exemplo health e executa um teste real. Seu pedido não altera o cenário.':'Pedido livre enviado ao provedor configurado. Os arquivos serão revisados e os testes gerados exigem Docker.';
@@ -91,7 +92,7 @@ $('#refresh').onclick=()=>refresh().catch(notify);
   const events=new EventSource('/api/events');
   events.onopen=()=>{online=true;$('#connection').textContent='Conectado';refresh().catch(notify);};
   events.onerror=()=>{online=false;$('#connection').textContent='Reconectando';$('#submit').disabled=true;};
-  events.onmessage=e=>{const r=JSON.parse(e.data);const i=runs.findIndex(x=>x.id===r.id);if(i<0)runs.unshift(r);else runs[i]=r;if(!current||current.id===r.id)current=r;render();};
+  events.onmessage=e=>{const r=ingest(JSON.parse(e.data));if(!current||current.id===r.id)current=r;render();};
   await refresh();
  }catch(e){notify(e);}
 })();

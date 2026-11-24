@@ -8,11 +8,11 @@ import assert from 'node:assert/strict';
 const data=await mkdtemp(join(tmpdir(),'agent-studio-browser-'));
 const port=22500+Math.floor(Math.random()*500),base='http://127.0.0.1:'+port;
 const child=spawn(process.execPath,['server.mjs'],{env:{...process.env,PORT:String(port),STUDIO_DATA_DIR:data,AI_API_KEY:'',AI_MODEL:''},stdio:'ignore'});
-let browser;
+let browser,page;
 try{
  let ready=false;for(let i=0;i<100;i++){try{if((await fetch(base+'/api/config')).ok){ready=true;break;}}catch{}await delay(40);}assert.ok(ready);
  browser=await chromium.launch({headless:true});
- const page=await browser.newPage({viewport:{width:1440,height:1000}});
+ page=await browser.newPage({viewport:{width:1440,height:1000}});
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto(base);
  await page.getByRole('button',{name:'Reunir o time'}).click();
@@ -33,6 +33,10 @@ try{
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'No horizontal overflow on mobile');
  assert.deepEqual(errors,[]);
  console.log('Browser flow passed: approvals, diff, tests, desktop and mobile.');
+}catch(e){
+ console.error('Browser state:',await page?.locator('body').innerText());
+ console.error('Server state:',await (await fetch(base+'/api/runs')).text());
+ throw e;
 }finally{
  await browser?.close();
  if(child.exitCode===null){const exited=new Promise(resolve=>child.once('exit',resolve));child.kill('SIGTERM');await exited;}
