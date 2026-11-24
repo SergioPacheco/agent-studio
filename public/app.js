@@ -27,7 +27,7 @@ function renderHistory(){
 }
 async function action(name){
  if(!current)return;const id=current.id;const buttons=[...$('#approval').querySelectorAll('button')];buttons.forEach(b=>b.disabled=true);
- try{await api('/api/runs/'+id+'/'+name,{method:'POST',body:'{}'});current=await api('/api/runs/'+id);notify('');render();}catch(e){notify(e);buttons.forEach(b=>b.disabled=false);}
+ try{await api('/api/runs/'+id+'/'+name,{method:'POST',body:'{}'});current=ingest(await api('/api/runs/'+id));notify('');render();}catch(e){notify(e);buttons.forEach(b=>b.disabled=false);}
 }
 function renderApproval(){
  const root=$('#approval');root.replaceChildren();
@@ -76,7 +76,7 @@ function render(){
  if(current?.error)notify(current.error);
  $('#submit').disabled=!online||runs.some(r=>['planning','executing','reviewing','testing'].includes(r.status));
 }
-async function refresh(){runs=await api('/api/runs');if(current)current=runs.find(r=>r.id===current.id)||current;else current=runs[0]||null;render();}
+async function refresh(){for(const r of await api('/api/runs'))ingest(r);runs.sort((a,b)=>b.createdAt.localeCompare(a.createdAt));if(current)current=runs.find(r=>r.id===current.id)||current;else current=runs[0]||null;render();}
 $('#request').onsubmit=async e=>{
  e.preventDefault();notify('');$('#submit').disabled=true;
  try{const created=await api('/api/runs',{method:'POST',body:JSON.stringify({mode:$('#mode').value,prompt:$('#prompt').value})});current=ingest(created);current=ingest(await api('/api/runs/'+created.id));tab='activity';document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('selected',b.dataset.tab===tab));render();}catch(e){notify(e);$('#submit').disabled=false;}
