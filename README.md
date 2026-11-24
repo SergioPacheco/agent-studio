@@ -2,6 +2,14 @@
 
 Estúdio visual de agentes para o exercício **REA is back — IA e Produtividade**. Uma implementação original inspirada no Estúdio descrito por Fernando Nogueira, com ideias de especialistas persistentes do OpenDots e visualização de atividade do Pixel Agents. Não é uma cópia da implementação interna desses projetos.
 
+## Veja a aplicação
+
+Capturas reais da execução demonstrativa verificada pelo CI:
+
+![Estúdio com personagens, mapa do time e gráficos](docs/screenshots/desktop.webp)
+
+[Ver versão para celular](docs/screenshots/mobile.webp) · [Ver estado inicial](docs/screenshots/welcome.webp)
+
 ## Interface visual
 
 - Cinco personagens vetoriais originais com volume, braços articulados, expressões, acessórios e animações por estado.
