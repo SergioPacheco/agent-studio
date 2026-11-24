@@ -2,6 +2,14 @@
 
 Estúdio multiagente inspirado no [post de Fernando Nogueira](https://www.linkedin.com/feed/update/urn:li:activity:7521330422434246656/), implementado para a atividade **REA is back**. Um pedido reúne especialistas, produz propostas, gera um plano, executa tarefas, revisa o código e pede sua decisão sobre os arquivos e comandos.
 
+## Interface verificada
+
+Capturas reais do teste de navegador, com cinco personagens WebGL. O cenário mostrado é a demonstração fixa, identificada na própria interface.
+
+![Estúdio com personagens 3D](docs/screenshots/full/welcome.webp)
+
+[Execução concluída e gráficos](docs/screenshots/full/desktop.webp) · [Interface no celular](docs/screenshots/full/mobile.webp)
+
 ## Começar
 
 **Node.js 22.12+**. O servidor web não precisa de bibliotecas npm em produção.
