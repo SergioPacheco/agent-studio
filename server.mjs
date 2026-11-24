@@ -11,7 +11,7 @@ const PORT=Number(process.env.PORT||5173);
 const HOST='127.0.0.1';
 const config={base:(process.env.AI_BASE_URL||'https://api.openai.com/v1').replace(/\/$/,''),key:process.env.AI_API_KEY||'',model:process.env.AI_MODEL||'',models:Object.fromEntries(AGENTS.map(a=>[a.id,process.env['AI_MODEL_'+a.id.toUpperCase()]]))};
 await mkdir(join(DATA,'runs'),{recursive:true});
-const runs=new Map(),streams=new Set(),busy=new Set(),saves=new Map();
+const runs=new Map(),streams=new Set(),busy=new Set(),saves=new Map(),jobs=new Map();
 const active=new Set(['planning','executing','reviewing','testing']);
 for(const name of await readdir(join(DATA,'runs'))){
  if(!/^[a-f0-9-]+\.json$/.test(name))continue;
@@ -45,7 +45,7 @@ async function runner(r,signal){
  }finally{await command('docker',['rm','-f',name],{timeout:5000}).catch(()=>{});}
 }
 const engine=new Engine({persist,config,runner});
-function launch(r,fn){if(busy.has(r.id))throw new Error('Execução ocupada.');busy.add(r.id);void fn().catch(console.error).finally(()=>busy.delete(r.id));}
+function launch(r,fn){if(busy.has(r.id))throw new Error('Execução ocupada.');busy.add(r.id);const pending=fn().catch(console.error).finally(()=>{busy.delete(r.id);jobs.delete(r.id);});jobs.set(r.id,pending);}
 function json(res,status,data){res.writeHead(status,{'Content-Type':'application/json; charset=utf-8'});res.end(JSON.stringify(data));}
 async function body(req){let s='';for await(const chunk of req){s+=chunk;if(Buffer.byteLength(s)>20000)throw new Error('Pedido excede 20 KB.');}return JSON.parse(s||'{}');}
 const assets={'/':['index.html','text/html'],'/app.js':['app.js','text/javascript'],'/style.css':['style.css','text/css']};
@@ -87,9 +87,11 @@ const server=http.createServer(async(req,res)=>{
     await body(req);
     if(action==='cancel'){
      engine.cancel(r.id);
-     if(!busy.has(r.id)){r.status='cancelled';await persist(r);}
+     await jobs.get(r.id);
+     if(!['completed','test_failed'].includes(r.status)){r.status='cancelled';await persist(r);}
      return json(res,200,{ok:true});
     }
+    if(busy.has(r.id)&&['awaiting_plan','awaiting_files'].includes(r.status))await jobs.get(r.id);
     if(busy.has(r.id))return json(res,409,{error:'Execução ocupada.'});
     if(action==='approve-plan'&&r.status==='awaiting_plan'){r.status='executing';await persist(r);launch(r,()=>engine.execute(r));return json(res,202,{ok:true});}
     if(action==='approve-files'&&r.status==='awaiting_files'){r.status='testing';await persist(r);launch(r,()=>engine.test(r));return json(res,202,{ok:true});}
