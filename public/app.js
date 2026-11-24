@@ -41,7 +41,7 @@ function renderHistory(){
 }
 async function action(name,payload={}){
  if(!current)return;const id=current.id;const buttons=[...$('#approval').querySelectorAll('button')];buttons.forEach(b=>b.disabled=true);
- try{await api('/api/runs/'+id+'/'+name,{method:'POST',body:JSON.stringify(name==='approve-files'?{selectedFiles:[...selectedFiles()],confirmHostTest:!!$('#confirm-host-test')?.checked,...payload}:payload)});current=ingest(await api('/api/runs/'+id));notify('');render();}catch(e){notify(e);buttons.forEach(b=>b.disabled=false);}
+ try{await api('/api/runs/'+id+'/'+name,{method:'POST',body:JSON.stringify(name==='approve-files'?{selectedFiles:[...selectedFiles()],confirmHostTest:!!$('#confirm-host-test')?.checked,...payload}:payload)});current=ingest(await api('/api/runs/'+id));notify('');render();return true;}catch(e){notify(e);buttons.forEach(b=>b.disabled=false);return false;}
 }
 function renderApproval(){
  const root=$('#approval');root.replaceChildren();

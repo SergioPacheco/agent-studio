@@ -123,7 +123,7 @@ const server=http.createServer(async(req,res)=>{
      const a=r.pendingActions?.find(a=>a.id===match[3]);const resolveAction=actionWaiters.get(match[3]);if(!a||a.status!=='pending'||!resolveAction)throw new Error('Aprovação expirada ou já respondida.');if(typeof b.approved!=='boolean')throw new Error('Informe aprovação explícita.');a.status=b.approved?'approved':'declined';a.decidedAt=new Date().toISOString();actionWaiters.delete(a.id);await persist(r);resolveAction(b.approved);return json(res,200,{ok:true});
     }
     if(action==='cancel'){engine.cancel(r.id);await jobs.get(r.id);if(!['completed','test_failed'].includes(r.status)){r.status='cancelled';await persist(r);}return json(res,200,{ok:true});}
-    if(jobs.has(r.id)&&['awaiting_plan','awaiting_files'].includes(r.status))await jobs.get(r.id);if(jobs.has(r.id))return json(res,409,{error:'Execução ocupada.'});
+    if(jobs.has(r.id)&&!active.has(r.status))await jobs.get(r.id);if(jobs.has(r.id))return json(res,409,{error:'Execução ocupada.'});
     if(action==='approve-plan'&&r.status==='awaiting_plan'){r.status='executing';await persist(r);launch(r,()=>engine.execute(r));return json(res,202,{ok:true});}
     if(action==='approve-files'&&r.status==='awaiting_files'){
      const changed=diffFiles(r.baseline,r.files).map(d=>d.path);const selected=b.selectedFiles??changed;if(!Array.isArray(selected)||selected.some(p=>!changed.includes(p))||new Set(selected).size!==selected.length)throw new Error('Seleção de arquivos inválida.');

@@ -4,7 +4,7 @@ Estúdio multiagente inspirado no [post de Fernando Nogueira](https://www.linked
 
 ## Começar
 
-**Node.js 22+**. O servidor web não precisa de bibliotecas npm em produção.
+**Node.js 22.12+**. O servidor web não precisa de bibliotecas npm em produção.
 
 ```sh
 git clone https://github.com/SergioPacheco/agent-studio.git
@@ -119,13 +119,13 @@ Para gerar AppImage Linux:
 npm run desktop:pack
 ```
 
-O workflow manual **Build desktop application** também gera o instalador. O CI principal faz smoke test abrindo a janela com cinco agentes. O servidor web continua podendo rodar sem instalar Electron. Em sistemas sem aceleração gráfica o fallback SVG é identificado.
+O workflow manual **Build desktop application** também gera o instalador. O CI principal faz smoke test abrindo a janela com cinco agentes. Em Linux, o helper de sandbox do Chromium precisa da configuração exigida pelo Electron; o CI configura o helper oficial com proprietário root e modo 4755, sem desabilitar o sandbox. O servidor web continua podendo rodar sem instalar Electron. Em sistemas sem aceleração gráfica o fallback SVG é identificado.
 
 ## Deploy automático à VPS
 
 O workflow **Deploy verified commit to VPS** espera o workflow **Verify Agent Studio** terminar com sucesso em um push à main. Para ativar:
 
-1. Prepare VPS Linux com Node.js 22+, Git/rsync e uma conta sem privilégios administrativos para a aplicação.
+1. Prepare VPS Linux com Node.js 22.12+, Git/rsync e uma conta sem privilégios administrativos para a aplicação.
 2. Instale uma primeira cópia em uma subpasta de `/home/SEU_USUARIO/`, crie `.env` e execute `node scripts/install-service.mjs`; siga os comandos de systemd exibidos. Habilite linger para o usuário se precisar manter o serviço após logout.
 3. Configure os secrets do repositório: `VPS_HOST`, `VPS_USER`, `VPS_PATH`, `VPS_SSH_KEY`, `VPS_KNOWN_HOSTS` (chave do host verificada fora do pipeline).
 4. Defina a variável de repositório `VPS_DEPLOY_ENABLED=true` e configure o environment `production` conforme sua política.

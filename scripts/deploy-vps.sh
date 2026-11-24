@@ -6,7 +6,7 @@ set -euo pipefail
 : "${VPS_SSH_KEY:?Configure VPS_SSH_KEY}"
 : "${VPS_KNOWN_HOSTS:?Configure VPS_KNOWN_HOSTS verificado}"
 [[ "$VPS_HOST" =~ ^[a-zA-Z0-9.-]+$ ]] || exit 2
-[[ "$VPS_USER" =~ ^[a-zA-Z0-9_-]+$ ]] || exit 2
+[[ "$VPS_USER" =~ ^[a-z_][a-z0-9_-]*$ ]] || exit 2
 [[ "$VPS_PATH" =~ ^/home/[a-zA-Z0-9_/-]+$ ]] || exit 2
 [[ "$VPS_PATH" != *..* && "$VPS_PATH" != "/home/$VPS_USER" && "$VPS_PATH" == "/home/$VPS_USER/"* ]] || exit 2
 keydir=$(mktemp -d)
