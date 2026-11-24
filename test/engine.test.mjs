@@ -29,3 +29,8 @@ test('test runner is blocked if artifact changed after review',async()=>{
  const e=engine(()=>{throw new Error('must not run');}),r=run('demo');
  await e.start(r);await e.execute(r);r.files['health.mjs']='changed';await e.test(r);assert.equal(r.status,'error');assert.match(r.error,/mudaram/);
 });
+test('test repair starts from approved files, without restoring rejected drafts',async()=>{
+ const e=engine(),r=run();r.status='test_failed';r.test={output:'real test failure'};r.files={'a.mjs':'approved','rejected.mjs':'draft'};r.appliedFiles={'a.mjs':'approved'};
+ e.work=async()=>{assert.equal(Object.hasOwn(r.files,'rejected.mjs'),false);r.files['a.mjs']='fixed';};e.review=async()=>{r.status='awaiting_files';};
+ await e.repair(r);assert.equal(r.status,'awaiting_files');assert.equal(r.files['a.mjs'],'fixed');assert.equal(r.testRepairs,1);
+});

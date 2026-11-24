@@ -116,7 +116,7 @@ const server=http.createServer(async(req,res)=>{
   if(match){
    const r=runs.get(match[1]);if(!r)return json(res,404,{error:'Execução não encontrada.'});const action=match[2];
    if(req.method==='GET'&&!action)return json(res,200,r);if(req.method==='GET'&&action==='diff')return json(res,200,diffFiles(r.baseline,r.files));
-   if(req.method==='GET'&&action==='files'){res.setHeader('Content-Disposition','attachment; filename="agent-studio-'+r.id+'.json"');return json(res,200,{objective:r.prompt,mode:r.mode,files:r.files,review:r.review,test:r.test,sources:r.sources,usage:r.usage});}
+   if(req.method==='GET'&&action==='files'){res.setHeader('Content-Disposition','attachment; filename="agent-studio-'+r.id+'.json"');return json(res,200,{objective:r.prompt,mode:r.mode,files:r.appliedFiles||r.files,review:r.review,test:r.test,sources:r.sources,usage:r.usage});}
    if(req.method==='POST'&&action){
     const b=await body(req);
     if(action==='actions'){
