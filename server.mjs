@@ -48,7 +48,7 @@ const engine=new Engine({persist,config,runner});
 function launch(r,fn){if(busy.has(r.id))throw new Error('Execução ocupada.');busy.add(r.id);const pending=fn().catch(console.error).finally(()=>{busy.delete(r.id);jobs.delete(r.id);});jobs.set(r.id,pending);}
 function json(res,status,data){res.writeHead(status,{'Content-Type':'application/json; charset=utf-8'});res.end(JSON.stringify(data));}
 async function body(req){let s='';for await(const chunk of req){s+=chunk;if(Buffer.byteLength(s)>20000)throw new Error('Pedido excede 20 KB.');}return JSON.parse(s||'{}');}
-const assets={'/':['index.html','text/html'],'/app.js':['app.js','text/javascript'],'/style.css':['style.css','text/css']};
+const assets={'/':['index.html','text/html'],'/app.js':['app.js','text/javascript'],'/visuals.js':['visuals.js','text/javascript'],'/style.css':['style.css','text/css']};
 const server=http.createServer(async(req,res)=>{
  res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Cache-Control','no-store');
  res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'");

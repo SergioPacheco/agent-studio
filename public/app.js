@@ -1,3 +1,4 @@
+import {createMascot,renderDashboard} from './visuals.js';
 const $=s=>document.querySelector(s);
 let agents=[],runs=[],current=null,tab='activity',online=false;
 function ingest(r){const old=runs.find(x=>x.id===r.id);if(old&&old.events.length>r.events.length)return old;const i=runs.findIndex(x=>x.id===r.id);if(i<0)runs.unshift(r);else runs[i]=r;return r;}
@@ -6,17 +7,24 @@ const states={idle:'Disponível',working:'Trabalhando',done:'Concluído',waiting
 function el(tag,cls,text){const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;}
 async function api(path,options={}){const r=await fetch(path,{...options,headers:{'Content-Type':'application/json'}});const d=await r.json();if(!r.ok)throw new Error(d.error||'Erro na requisição');return d;}
 function notify(e){$('#notice').textContent=e?.message||e||'';}
+let selectedAgent='maestro';
+function selectAgent(id){selectedAgent=id;renderAgents();renderDashboard(current,agents,selectedAgent,selectAgent);}
 function renderAgents(){
- const root=$('#agents');root.replaceChildren();
+ const root=$('#agents');
  for(const a of agents){
-  const state=current?.agents[a.id]||'idle';const card=el('div','agent '+state);
-  const last=current?.events.filter(e=>e.agent===a.id).at(-1);
-  card.append(el('div','speech',state==='working'?(last?.message||'Trabalhando').slice(0,45):''));
-  const mascot=el('div','mascot');mascot.style.setProperty('--c',a.color);mascot.append(el('span','face',a.icon));
-  card.append(mascot,el('b','',a.name),el('small','',a.role),el('span','agent-state',states[state]));
-  root.append(card);
+  let card=root.querySelector('[data-agent="'+a.id+'"]');
+  if(!card){
+   card=el('button','agent');card.type='button';card.dataset.agent=a.id;card.setAttribute('aria-label','Inspecionar '+a.name);
+   card.append(el('div','speech'),createMascot(a),el('b','',a.name),el('small','',a.role),el('span','agent-state'));
+   card.onclick=()=>selectAgent(a.id);root.append(card);
+  }
+  const state=current?.agents[a.id]||'idle',last=current?.events.filter(e=>e.agent===a.id).at(-1);
+  card.className='agent '+state+(selectedAgent===a.id?' selected':'');card.setAttribute('aria-pressed',String(selectedAgent===a.id));
+  card.querySelector('.speech').textContent=last?(state==='working'?'Em ação: ':'')+last.message.slice(0,65):'Pronto para colaborar';
+  card.querySelector('.speech').title=last?.message||'Pronto para colaborar';card.querySelector('.agent-state').textContent=states[state];
  }
 }
+
 function renderHistory(){
  $('#history').replaceChildren();
  for(const r of runs){
@@ -53,7 +61,7 @@ function renderContent(){
  }
  if(tab==='plan'){
   if(!current.plan)root.append(el('div','empty','Preparando o plano...'));
-  else{for(const p of current.proposals||[])root.append(el('p','',p.agent+' · '+(p.assume?'Assume: ':'Passa: ')+p.reason));root.append(el('p','',current.plan.summary));for(const t of current.plan.tasks){const card=el('div','task',t.title);card.append(el('small','',t.agent+' · dependências: '+(t.dependsOn.join(', ')||'nenhuma')));root.append(card);}}
+  else{for(const p of current.proposals||[])root.append(el('p','',p.agent+' · '+(p.assume?'Assume: ':'Passa: ')+p.reason));root.append(el('p','',current.plan.summary));for(const t of current.plan.tasks){const card=el('div','task',t.title);card.append(el('small','',(t.status==='done'?'✓ ':t.status==='working'?'◉ ':'○ ')+t.agent+' · dependências: '+(t.dependsOn.join(', ')||'nenhuma')));root.append(card);}}
  }
  if(tab==='files'){
   if(!Object.keys(current.files).length)root.append(el('div','empty','Nenhum arquivo preparado ainda.'));
@@ -70,7 +78,7 @@ function renderContent(){
  }
 }
 function render(){
- renderAgents();renderHistory();renderApproval();renderContent();
+ renderAgents();renderDashboard(current,agents,selectedAgent,selectAgent);renderHistory();renderApproval();renderContent();
  $('#status').textContent=current?(labels[current.status]||current.status):'Pronto para começar';
  $('#caption').textContent=current?(current.mode==='demo'?'Demonstração fixa · ':'IA conectada · ')+(labels[current.status]||current.status):'Uma equipe pronta para transformar seu próximo pedido em algo real.';
  if(current?.error)notify(current.error);
@@ -84,6 +92,7 @@ $('#request').onsubmit=async e=>{
 $('#example').onclick=()=>$('#prompt').value='Crie um módulo health que retorne status ok, com documentação e teste.';
 $('#mode').onchange=()=>$('#mode-note').textContent=$('#mode').value==='demo'?'Sem LLM: gera o exemplo health e executa um teste real. Seu pedido não altera o cenário.':'Pedido livre enviado ao provedor configurado. Os arquivos serão revisados e os testes gerados exigem Docker.';
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;document.querySelectorAll('[data-tab]').forEach(t=>t.classList.toggle('selected',t===b));renderContent();});
+$('#motion').onclick=()=>{const paused=document.body.classList.toggle('motion-paused');$('#motion').textContent=paused?'Ativar animações':'Pausar animações';$('#motion').setAttribute('aria-pressed',String(paused));};
 $('#refresh').onclick=()=>refresh().catch(notify);
 (async()=>{
  try{

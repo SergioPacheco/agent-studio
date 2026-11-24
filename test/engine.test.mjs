@@ -6,7 +6,7 @@ function engine(runner=async()=>({code:0,output:'ok'})){return new Engine({persi
 test('demo waits for both approvals and executes independent runner',async()=>{
  let calls=0;const e=engine(async()=>{calls++;return {code:0,output:'pass'};}),r=run('demo');
  await e.start(r);assert.equal(r.status,'awaiting_plan');assert.equal(calls,0);
- await e.execute(r);assert.equal(r.status,'awaiting_files');assert.equal(calls,0);
+ await e.execute(r);assert.equal(r.status,'awaiting_files');assert.equal(calls,0);assert.ok(r.plan.tasks.every(t=>t.status==='done'));assert.ok(r.phases.includes('review'));
  await e.test(r);assert.equal(r.status,'completed');assert.equal(calls,1);
 });
 test('executor tool results feed next turn; reviewer sees separate context',async()=>{

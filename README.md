@@ -2,6 +2,18 @@
 
 Estúdio visual de agentes para o exercício **REA is back — IA e Produtividade**. Uma implementação original inspirada no Estúdio descrito por Fernando Nogueira, com ideias de especialistas persistentes do OpenDots e visualização de atividade do Pixel Agents. Não é uma cópia da implementação interna desses projetos.
 
+## Interface visual
+
+- Cinco personagens vetoriais originais com volume, braços articulados, expressões, acessórios e animações por estado.
+- Seleção do personagem ou nó do mapa abre seus últimos eventos no inspetor lateral.
+- Grafo do time: linhas discretas mostram coordenação prevista; linhas coloridas mostram mudanças de responsável observadas em eventos consecutivos. **Não representa mensagens diretas que o servidor não registrou.**
+- Barras mostram contagem de eventos por agente; cartões mostram arquivos, eventos, chamadas e tokens informados.
+- Anel mostra tarefas realmente concluídas no plano. Revisão, aprovação e testes têm indicadores separados; completar tarefas não equivale a passar nos testes.
+- Controle para pausar animações, navegação por teclado e suporte a movimento reduzido.
+- No modo demo todos esses gráficos usam o cenário fixo identificado. No modo IA usam os eventos do provedor e das ferramentas.
+
+Os personagens são SVG animado com aparência de volume (2.5D), não modelos WebGL tridimensionais. Não é necessário baixar assets externos.
+
 ## Iniciar
 
 Requisito: **Node.js 22 ou superior**. Nenhuma dependência npm para instalar.
@@ -82,7 +94,7 @@ No demo apenas o fixture fixo conferido por hash é executado diretamente no hos
 
 O app é local, de usuário único, sem autenticação. Não o exponha por proxy público. Valida Host e Origin, renderiza texto sem HTML de modelos e limita tipos/tamanho/caminhos. Pedidos e artefatos do modo IA são enviados ao endpoint configurado. \`.env\` e \`.studio\` não entram no Git. Não grave segredos nas tarefas.
 
-**Fora do escopo:** múltiplos endpoints/provedores simultâneos, voz, Slack, navegador remoto, MCP, mascotes modelados em 3D, edição colaborativa, retry automático após falha de testes e execução paralela. Os mascotes são CSS com volume visual. As conclusões sobre capacidades dos agentes não dependem das animações.
+**Fora do escopo:** múltiplos endpoints/provedores simultâneos, voz, Slack, navegador remoto, MCP, mascotes WebGL modelados em 3D, edição colaborativa, retry automático após falha de testes e execução paralela. Os mascotes são vetores SVG originais animados por CSS, com volume visual. As conclusões sobre capacidades dos agentes não dependem das animações.
 
 ## Verificação
 
@@ -91,7 +103,7 @@ npm run check
 npm test
 ~~~
 
-GitHub Actions verifica sintaxe e executa testes de regras, ferramentas, revisão e ciclo HTTP completo com testes reais do fixture, persistência e bloqueio de origem externa. O CI verifica a interface em Chromium: envio, duas aprovações, diff, resultado de testes e ausência de overflow horizontal em tela de 390 px; salva capturas desktop/mobile. Playwright é instalado somente para essa verificação, não para executar o app.
+GitHub Actions verifica sintaxe e executa testes de regras, ferramentas, revisão e ciclo HTTP completo com testes reais do fixture, persistência e bloqueio de origem externa. O CI verifica a interface em Chromium: envio, duas aprovações, diff, resultado de testes, cinco personagens, inspeção do agente, grafo, métricas, progresso de tarefas, pausa de animações, movimento reduzido e ausência de overflow horizontal em tela de 390 px; salva capturas desktop/mobile. Playwright é instalado somente para essa verificação, não para executar o app.
 
 O CI também testa o protocolo de IA com um provedor HTTP simulado e execução real em Docker. Testes automatizados não chamam provedores pagos. **A integração live precisa de validação com suas credenciais; não é declarada verificada só pelo CI.**
 

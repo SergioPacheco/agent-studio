@@ -11,10 +11,18 @@ const child=spawn(process.execPath,['server.mjs'],{env:{...process.env,PORT:Stri
 let browser,page;
 try{
  let ready=false;for(let i=0;i<100;i++){try{if((await fetch(base+'/api/config')).ok){ready=true;break;}}catch{}await delay(40);}assert.ok(ready);
- browser=await chromium.launch({headless:true});
+ browser=await chromium.launch({headless:true,...(process.env.CHROMIUM_PATH?{executablePath:process.env.CHROMIUM_PATH}:{})});
  page=await browser.newPage({viewport:{width:1440,height:1000}});
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto(base);
+ await page.locator('#agents .robot-svg').first().waitFor();
+ assert.equal(await page.locator('#agents .robot-svg').count(),5);
+ assert.equal(await page.locator('#visual-metrics .metric-card').count(),4);
+ await mkdir('.studio/screenshots',{recursive:true});
+ await page.screenshot({path:'.studio/screenshots/welcome.png',fullPage:true});
+ await page.getByRole('button',{name:'Pausar animações'}).click();
+ assert.equal(await page.locator('.robot-body').first().evaluate(n=>getComputedStyle(n).animationPlayState),'paused');
+ await page.getByRole('button',{name:'Ativar animações'}).click();
  await page.getByRole('button',{name:'Reunir o time'}).click();
  await page.getByRole('button',{name:'Aprovar plano',exact:true}).waitFor();
  await page.getByRole('tab',{name:'Plano',exact:true}).click();
@@ -26,11 +34,19 @@ try{
  await page.locator('#status').filter({hasText:'Concluído'}).waitFor();
  await page.getByRole('tab',{name:'Testes',exact:true}).click();
  await page.getByText('✓ Testes passaram',{exact:true}).waitFor();
- await mkdir('.studio/screenshots',{recursive:true});
+ assert.equal(await page.locator('#task-progress .ring-label').textContent(),'2/2');
+ assert.equal(await page.locator('#visual-metrics .metric-card b').first().textContent(),'3');
+ assert.ok(await page.locator('#graph .graph-edge').count()>0);
+ assert.equal(await page.locator('.pipeline-step.complete').count(),5);
+ await page.locator('#agents').getByRole('button',{name:'Inspecionar Revisor',exact:true}).click();
+ assert.equal(await page.locator('#agent-inspector .inspector-title b').textContent(),'Revisor');
+ assert.ok(await page.locator('#agent-inspector .inspector-event').count()>0);
  await page.screenshot({path:'.studio/screenshots/desktop.png',fullPage:true});
  await page.setViewportSize({width:390,height:844});
  await page.screenshot({path:'.studio/screenshots/mobile.png',fullPage:true});
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'No horizontal overflow on mobile');
+ await page.emulateMedia({reducedMotion:'reduce'});
+ assert.equal(await page.locator('.robot-body').first().evaluate(n=>getComputedStyle(n).animationName),'none');
  assert.deepEqual(errors,[]);
  console.log('Browser flow passed: approvals, diff, tests, desktop and mobile.');
 }catch(e){
