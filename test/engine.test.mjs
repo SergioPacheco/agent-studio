@@ -44,3 +44,8 @@ test('blocked pipeline gate does not release a downstream task',async()=>{
  e.model=async()=>{calls++;return {content:JSON.stringify({status:'blocked',summary:'No source'})};};
  await e.execute(r);assert.equal(r.status,'error');assert.equal(calls,1);assert.equal(r.plan.tasks[1].status,undefined);assert.match(r.error,/No source/);
 });
+test('adaptive planning selects one executor without querying every specialist first',async()=>{
+ const e=engine(),r=run();let calls=0;
+ e.model=async(_r,role,messages)=>{calls++;assert.equal(role,'maestro');assert.match(messages[0].content,/Select architecture/);return {content:JSON.stringify({outputKind:'code',architecture:{type:'single',rationale:'One bounded change',judge:'Existing test'},summary:'Change message',tasks:[{id:'change',agent:'chevron',title:'Change approved message',dependsOn:[],contract:{delivery:'Updated message',format:'Source diff',trigger:'Approved text',validation:'Existing test'}}]})};};
+ await e.start(r);assert.equal(r.status,'awaiting_plan');assert.equal(calls,1);assert.equal(r.architecture.type,'single');assert.equal(r.plan.tasks.length,1);assert.deepEqual(r.proposals,[]);
+});
