@@ -49,7 +49,7 @@ function renderApproval(){
  for(const pending of current.pendingActions||[]){if(pending.status!=='pending')continue;const box=el('div','approval command-approval');box.append(el('b','',pending.label),el('p','',pending.reason),el('pre','',JSON.stringify(pending.argv)+'\n'+pending.cwd+'\nImagem: '+pending.image));const yes=el('button','primary','Aprovar comando'),no=el('button','danger','Recusar comando');yes.onclick=()=>action('actions/'+pending.id,{approved:true});no.onclick=()=>action('actions/'+pending.id,{approved:false});box.append(yes,no);root.append(box);}
  let text,button,act;
  if(current.status==='awaiting_plan'){text='Confira a distribuição de tarefas antes de autorizar a execução.';button='Aprovar plano';act='approve-plan';}
- if(current.status==='awaiting_files'){text='Confira o diff e selecione os arquivos. '+(current.projectId?'As alterações aprovadas serão aplicadas ao projeto '+current.projectName+'. ':'Um novo projeto será salvo. ')+(current.projectConfig?.testMode==='host'?'Os testes executarão código na pasta original: ':'Testes isolados: ')+JSON.stringify(current.projectConfig?.testCommand||['node','--test']);button='Aprovar arquivos e testar';act='approve-files';}
+ if(current.status==='awaiting_files'){text='Confira o diff e selecione os arquivos. '+(current.projectId?'As alterações aprovadas serão aplicadas ao projeto '+current.projectName+'. ':'Um novo projeto será salvo. ')+(current.projectConfig?.testMode==='host'?'Os testes executarão código na pasta original: ':'Testes isolados: ')+JSON.stringify(current.projectConfig?.testCommand||['node','--test']);button='Aprovar arquivos e testar';act='approve-files';if(current.outputKind==='report'){text='Confira o relatório e selecione os arquivos. A aprovação aplica os artefatos e verifica sua estrutura; não executa testes de código nem comprova os achados.';button='Aprovar e verificar relatório';}}
  if(text){
   const box=el('div','approval');box.append(el('b','',button),el('p','',text));if(current.projectConfig?.testMode==='host'&&current.status==='awaiting_files'){const label=el('label','inline-check',' Autorizo este comando na pasta original.');const check=el('input');check.type='checkbox';check.id='confirm-host-test';label.prepend(check);box.append(label);}
  const row=el('div','approval-actions');
@@ -68,8 +68,9 @@ function renderContent(){
   root.append(el('div','metrics',current.mode==='demo'?'DEMO: decisões fixas · sem chamadas a IA':'IA: '+current.usage.calls+' chamadas · '+current.usage.tokens+' tokens informados pelo provedor'));
  }
  if(tab==='plan'){
+  if(current.architecture){const a=current.architecture;root.append(el('h3','',a.label),el('p','',a.rationale),el('p','','Validação: '+a.judge));}
   if(!current.plan)root.append(el('div','empty','Preparando o plano...'));
-  else{for(const p of current.proposals||[])root.append(el('p','',p.agent+' · '+(p.assume?'Assume: ':'Passa: ')+p.reason));root.append(el('p','',current.plan.summary));for(const t of current.plan.tasks){const card=el('div','task',t.title);card.append(el('small','',(t.status==='done'?'✓ ':t.status==='working'?'◉ ':'○ ')+t.agent+' · dependências: '+(t.dependsOn.join(', ')||'nenhuma')));root.append(card);}}
+  else{for(const p of current.proposals||[])root.append(el('p','',p.agent+' · '+(p.assume?'Assume: ':'Passa: ')+p.reason));root.append(el('p','',current.plan.summary));for(const t of current.plan.tasks){const card=el('div','task',t.title);card.append(el('small','',(t.status==='done'?'✓ ':t.status==='working'?'◉ ':'○ ')+t.agent+' · dependências: '+(t.dependsOn.join(', ')||'nenhuma')));if(t.domain)card.append(el('small','','Frente: '+t.domain));if(t.round)card.append(el('small','','Rodada: '+t.round));if(t.contract)card.append(el('small','','Entrega: '+t.contract.delivery+' · Formato: '+t.contract.format+' · Gatilho: '+t.contract.trigger+' · Validação: '+t.contract.validation));root.append(card);}}
  }
  if(tab==='files'){
   if(!Object.keys(current.files).length)root.append(el('div','empty','Nenhum arquivo preparado ainda.'));
@@ -82,7 +83,7 @@ function renderContent(){
  }
  if(tab==='tests'){
   if(!current.test)root.append(el('div','empty',current.error||'Testes ainda não executados. Aprove os arquivos para iniciar.'));
-  else{root.append(el('p','',current.test.code===0?'✓ Testes passaram':'✕ Testes falharam'),el('pre','',current.test.command+'\n\n'+current.test.output));if(current.status==='test_failed'&&(current.testRepairs||0)<2){const fix=el('button','primary','Corrigir falhas e revisar');fix.onclick=()=>action('repair');root.append(fix);}if(current.projectId&&current.backups?.length&&!current.restored){const restore=el('button','danger','Restaurar último backup');restore.onclick=()=>action('restore');root.append(restore);}if(current.status==='completed'&&current.projectId){const commit=el('button','primary','Criar commit / push');commit.onclick=()=>studio.openCommit();root.append(commit);if(current.commit)root.append(el('p','',current.commit.sha+(current.commit.pushed?' · enviado ao origin':' · commit local')));}}
+  else{root.append(el('p','',current.test.kind==='report'?'✓ Estrutura do relatório verificada':current.test.code===0?'✓ Testes passaram':'✕ Testes falharam'),el('pre','',(current.test.command||'Verificação de artefatos')+'\n\n'+current.test.output));if(current.status==='test_failed'&&(current.testRepairs||0)<2){const fix=el('button','primary','Corrigir falhas e revisar');fix.onclick=()=>action('repair');root.append(fix);}if(current.projectId&&current.backups?.length&&!current.restored){const restore=el('button','danger','Restaurar último backup');restore.onclick=()=>action('restore');root.append(restore);}if(current.status==='completed'&&current.projectId){const commit=el('button','primary','Criar commit / push');commit.onclick=()=>studio.openCommit();root.append(commit);if(current.commit)root.append(el('p','',current.commit.sha+(current.commit.pushed?' · enviado ao origin':' · commit local')));}}
  }
  if(tab==='sources'){
   for(const source of current.sources||[]){const item=el('article','source-card');let link;try{const url=new URL(source.url);if(['http:','https:'].includes(url.protocol)){link=el('a','',source.title||source.url);link.href=url.href;link.target='_blank';link.rel='noopener noreferrer';}}catch{}if(link)item.append(link);item.append(el('p','',source.excerpt||source.query||''));root.append(item);}
@@ -100,9 +101,9 @@ function render(){
 async function refresh(){for(const r of await api('/api/runs'))ingest(r);runs.sort((a,b)=>b.createdAt.localeCompare(a.createdAt));if(current)current=runs.find(r=>r.id===current.id)||current;else current=runs[0]||null;render();}
 $('#request').onsubmit=async e=>{
  e.preventDefault();notify('');$('#submit').disabled=true;
- try{const created=await api('/api/runs',{method:'POST',body:JSON.stringify({mode:$('#mode').value,prompt:$('#prompt').value,...studio.options()})});current=ingest(created);current=ingest(await api('/api/runs/'+created.id));tab='activity';document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('selected',b.dataset.tab===tab));render();}catch(e){notify(e);$('#submit').disabled=false;}
+ try{if($('#exercise-case').value&&$('#mode').value==='demo')throw new Error('Os casos são exemplos de planejamento. Configure IA conectada para executar; o demo health não executa estes casos.');const created=await api('/api/runs',{method:'POST',body:JSON.stringify({mode:$('#mode').value,prompt:$('#prompt').value,...studio.options()})});current=ingest(created);current=ingest(await api('/api/runs/'+created.id));tab='activity';document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('selected',b.dataset.tab===tab));render();}catch(e){notify(e);$('#submit').disabled=false;}
 };
-$('#example').onclick=()=>$('#prompt').value='Crie um módulo health que retorne status ok, com documentação e teste.';
+$('#example').onclick=()=>{$('#exercise-case').value='';$('#case-preview').replaceChildren();$('#prompt').value='Crie um módulo health que retorne status ok, com documentação e teste.';};
 $('#mode').onchange=()=>$('#mode-note').textContent=$('#mode').value==='demo'?'Sem LLM: gera o exemplo health e executa um teste real. Seu pedido não altera o cenário.':'Pedido livre enviado ao provedor configurado. Os arquivos serão revisados e os testes gerados exigem Docker.';
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;document.querySelectorAll('[data-tab]').forEach(t=>t.classList.toggle('selected',t===b));renderContent();});
 $('#motion').onclick=()=>{const paused=document.body.classList.toggle('motion-paused');$('#motion').textContent=paused?'Ativar animações':'Pausar animações';$('#motion').setAttribute('aria-pressed',String(paused));};
@@ -112,6 +113,9 @@ const studio=setupStudio({api,notify,onConfig:config=>{agents=config.agents;$('#
 (async()=>{
  try{
   try{await studio.refresh();}catch(e){if(e.authenticationRequired){await studio.login();await studio.refresh();}else throw e;}
+  const cases=await api('/api/cases');
+  for(const c of cases){const option=el('option','',c.title);option.value=c.id;$('#exercise-case').append(option);}
+  $('#exercise-case').onchange=()=>{const c=cases.find(c=>c.id===$('#exercise-case').value);const preview=$('#case-preview');preview.replaceChildren();if(!c)return;$('#prompt').value=c.prompt;const names={single:'Agente único',pipeline:'Esteira',supervisor:'Supervisor',hierarchical:'Hierárquica',network:'Rede'};preview.append(el('p','','Referência didática: '+names[c.architecture]),el('p','','Validação: '+c.judge),el('p','','O planejador analisa o pedido e justifica sua escolha. Nenhuma auditoria ou teste foi executado nesta prévia.'));if(!$('#mode').options[1].disabled){$('#mode').value='live';$('#mode').onchange();}};
   const events=new EventSource('/api/events');
   events.onopen=()=>{online=true;$('#connection').textContent='Conectado';refresh().catch(notify);};
   events.onerror=()=>{online=false;$('#connection').textContent='Reconectando';$('#submit').disabled=true;};
