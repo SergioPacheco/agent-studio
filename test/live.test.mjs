@@ -13,8 +13,7 @@ test('live protocol: model tools, separate review, approvals and Docker executio
  const provider=http.createServer(async(req,res)=>{
   let raw='';for await(const c of req)raw+=c;const b=JSON.parse(raw);modelCalls++;
   const sys=b.messages[0].content;let message;
-  if(sys.includes('Decide whether your specialty'))message={role:'assistant',content:JSON.stringify({assume:sys.includes('chevron'),reason:'Fixture proposal'})};
-  else if(sys.includes('Plan work'))message={role:'assistant',content:JSON.stringify({summary:'Build fixture',tasks:[{id:'health',agent:'chevron',title:'Implement health and tests',dependsOn:[]}]})};
+  if(sys.includes('Plan work'))message={role:'assistant',content:JSON.stringify({outputKind:'code',architecture:{type:'single',rationale:'Small isolated health module',judge:'Independent review and executable tests'},summary:'Build fixture',tasks:[{id:'health',agent:'chevron',title:'Implement health and tests',dependsOn:[],contract:{delivery:'Health module and existing fixture tests',format:'ES modules',trigger:'Plan approval',validation:'Independent review and node tests'}}]})};
   else if(sys.includes('Independently review'))message={role:'assistant',content:JSON.stringify({approved:true,summary:'Reviewed fixture',findings:[]})};
   else if(b.messages.some(m=>m.role==='tool'&&m.tool_call_id.startsWith('write-')))message={role:'assistant',content:'Files prepared.'};
   else if(!b.messages.some(m=>m.role==='tool'))message={role:'assistant',tool_calls:[{id:'command',type:'function',function:{name:'request_command',arguments:JSON.stringify({executable:'node',args:['-e',"console.log('approved command')"],reason:'Check the test runtime'})}}]};
@@ -29,12 +28,12 @@ test('live protocol: model tools, separate review, approvals and Docker executio
  try{
   let ready=false;for(let i=0;i<100;i++){try{if((await fetch(base+'/api/config')).ok){ready=true;break;}}catch{}await delay(30);}assert.ok(ready);
   const {id}=await (await post('/api/runs',{mode:'live',prompt:'Implement health module and test'})).json();
-  await wait(id,'awaiting_plan');await post('/api/runs/'+id+'/approve-plan');
+  const planned=await wait(id,'awaiting_plan');assert.equal(planned.architecture.type,'single');assert.equal(planned.outputKind,'code');assert.equal(modelCalls,1);await post('/api/runs/'+id+'/approve-plan');
   const pending=await wait(id,'awaiting_command');assert.equal(pending.pendingActions[0].result,undefined);assert.equal(pending.pendingActions[0].status,'pending');
   await post('/api/runs/'+id+'/actions/'+pending.pendingActions[0].id,{approved:true});
   const staged=await wait(id,'awaiting_files');assert.equal(staged.review.approved,true);assert.equal(staged.files['health.mjs'],DEMO_FILES['health.mjs']);
   await post('/api/runs/'+id+'/approve-files');
-  const done=await wait(id,'completed');assert.equal(done.test.code,0);assert.match(done.test.command,/--network=none/);assert.match(done.test.output,/health returns ok/);assert.equal(modelCalls,8);assert.match(done.pendingActions[0].result.output,/approved command/);
+  const done=await wait(id,'completed');assert.equal(done.test.code,0);assert.match(done.test.command,/--network=none/);assert.match(done.test.output,/health returns ok/);assert.equal(modelCalls,5);assert.equal(done.usage.calls,modelCalls);assert.match(done.pendingActions[0].result.output,/approved command/);
  }finally{
   if(child.exitCode===null){const exited=new Promise(resolve=>child.once('exit',resolve));child.kill('SIGTERM');await exited;}
   await new Promise(resolve=>provider.close(resolve));await rm(data,{recursive:true,force:true});

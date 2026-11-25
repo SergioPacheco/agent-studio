@@ -49,7 +49,7 @@ Exemplos de URLs base: `https://api.openai.com/v1`, `https://api.anthropic.com/v
 | --- | --- |
 | Mascotes com função e personalidade | Modelos **3D reais em WebGL**, gerados por código, com perspectiva, iluminação, juntas e expressões; cor e forma editáveis. SVG identificado como fallback se WebGL faltar. |
 | Um pedido para o time | Campo principal; Maestro recebe objetivo, memória aprovada e contexto da conversa selecionada. |
-| Rodada de propostas | Cada especialista indica se assume ou passa e justifica. O coordenador recebe as propostas. |
+| Planejamento adaptativo | O coordenador seleciona a arquitetura e distribui tarefas conforme dependências e permissões. |
 | Sequência ou paralelo | Plano com dependências e reservas de arquivos; scheduler até três tarefas independentes em paralelo, ou modo sequencial. |
 | Trabalho nas pastas dos projetos | Cadastro de pasta existente, leitura do snapshot, alterações preparadas, aplicação dos arquivos selecionados na pasta original, backup e detecção de conflitos. |
 | Aprovação de comandos sensíveis | Cartão com comando/argumentos, motivo, imagem e escopo. Só a decisão explícita libera execução; comandos propostos rodam em snapshot Docker isolado. |
@@ -166,3 +166,17 @@ Execuções, catálogo, memória e conversas são JSON com escrita temporária/r
 - [OpenDots](https://github.com/CopilotKit/OpenDots) e [Pixel Agents](https://github.com/pixel-agents-hq/pixel-agents): inspiração conceitual; sem cópia de código ou assets.
 
 Código e modelos visuais originais. Licença MIT.
+
+## Casos da aula e arquiteturas adaptativas
+
+O seletor **Casos da aula** carrega seis objetivos editáveis: triagem (esteira), auditoria (supervisor), reserva de salas (hierárquica), plano de aula (esteira), armazenamento (rede) e mensagem de erro (agente único). A referência didática e o critério de validação aparecem sem consumir IA. A seleção não executa auditorias nem inventa resultados. O modo demo continua sendo exclusivamente health.
+
+Em **IA conectada**, o planejador escolhe e justifica a arquitetura a partir do pedido editado; a aba Plano apresenta escolha, juiz, tarefas e contratos. A aprovação humana continua obrigatória. Portões retornam veredito estruturado: uma reprovação interrompe a execução antes de liberar dependentes. Relatórios possuem verificação estrutural própria, claramente distinta de testes de código; JSON de relatório fica em `reports/`. O limite passa a 32 tarefas por plano, sem aumentar permissões ou limites de snapshot. Etapas dependentes recebem os resultados textuais anteriores, além dos arquivos preparados.
+
+- Agente único: tarefas de um executor, serializadas. O revisor independente existente continua como portão de qualidade.
+- Esteira: dependência e passagem de resultado entre etapas, execução serial.
+- Supervisor: tarefas independentes em paralelo conforme os limites existentes, dependências explícitas para consolidação.
+- Hierárquica: coordenação representada por tarefas de domínio, validação de cada frente e integração dependente das validações. Não cria agentes recursivamente.
+- Rede: propostas/críticas em 1–3 rodadas; cada rodada depende de todas as tarefas anteriores; revisor externo recebe o registro completo.
+
+São casos de planejamento, não seis aplicações prontas. Para executar trabalho real, forneça os arquivos e requisitos e configure provedores. O projeto ainda utiliza um snapshot por execução: auditoria multi-repositório requer disponibilizar os arquivos dentro dos limites existentes. Testes automáticos de integração usam provedores simulados; não demonstram qualidade das escolhas de um modelo real.

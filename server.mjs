@@ -1,3 +1,4 @@
+import {CASES} from './lib/architectures.mjs';
 import http from 'node:http';
 import {readFile,mkdir,access} from 'node:fs/promises';
 import {constants} from 'node:fs';
@@ -74,6 +75,7 @@ const server=http.createServer(async(req,res)=>{
    if(!equalToken(input.token,process.env.STUDIO_AUTH_TOKEN)||!process.env.STUDIO_AUTH_TOKEN)return json(res,401,{error:'Token inválido.'});const token=randomUUID();sessions.set(token,Date.now()+86400000);res.setHeader('Set-Cookie','studio_session='+token+'; HttpOnly; SameSite=Strict; Path=/; Max-Age=86400'+(PUBLIC?.protocol==='https:'?'; Secure':''));return json(res,200,{ok:true});
   }
   if(!authenticated(req))return json(res,401,{error:'Informe o token de acesso do servidor.',authenticationRequired:true});
+  if(url.pathname==='/api/cases'&&req.method==='GET')return json(res,200,CASES);
   if(url.pathname==='/api/config'&&req.method==='GET')return json(res,200,{agents:catalog.agents,providers:catalog.providers,projects:catalog.projects,settings:catalog.settings,liveAvailable:await liveAvailable(),model:process.env.AI_MODEL||null,voice:{localTranscription:!!process.env.STUDIO_STT_COMMAND}});
   if(url.pathname==='/api/providers/status'&&req.method==='GET')return json(res,200,await providerStatuses());
   if(url.pathname==='/api/providers'&&req.method==='POST'){

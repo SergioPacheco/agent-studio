@@ -34,3 +34,18 @@ test('test repair starts from approved files, without restoring rejected drafts'
  e.work=async()=>{assert.equal(Object.hasOwn(r.files,'rejected.mjs'),false);r.files['a.mjs']='fixed';};e.review=async()=>{r.status='awaiting_files';};
  await e.repair(r);assert.equal(r.status,'awaiting_files');assert.equal(r.files['a.mjs'],'fixed');assert.equal(r.testRepairs,1);
 });
+test('dependency outputs reach the downstream model, including read-only tasks',async()=>{
+ const e=engine(),r=run();r.plan={tasks:[{id:'first',output:'evidence from first stage'},{id:'second',dependsOn:['first']}]};
+ e.model=async(_r,_role,messages)=>{const input=JSON.parse(messages[1].content);assert.deepEqual(input.inputs,[{task:'first',output:'evidence from first stage'}]);return {content:'downstream result'};};
+ const task=r.plan.tasks[1];await e.work(r,'scout','Check evidence',task);assert.equal(task.output,'downstream result');
+});
+test('blocked pipeline gate does not release a downstream task',async()=>{
+ const e=engine(),r=run();r.architecture={type:'pipeline'};r.plan={tasks:[{id:'gate',agent:'scout',title:'Check',validation:true,dependsOn:[]},{id:'send',agent:'chevron',title:'Send',dependsOn:['gate']}]};let calls=0;
+ e.model=async()=>{calls++;return {content:JSON.stringify({status:'blocked',summary:'No source'})};};
+ await e.execute(r);assert.equal(r.status,'error');assert.equal(calls,1);assert.equal(r.plan.tasks[1].status,undefined);assert.match(r.error,/No source/);
+});
+test('adaptive planning selects one executor without querying every specialist first',async()=>{
+ const e=engine(),r=run();let calls=0;
+ e.model=async(_r,role,messages)=>{calls++;assert.equal(role,'maestro');assert.match(messages[0].content,/Select architecture/);return {content:JSON.stringify({outputKind:'code',architecture:{type:'single',rationale:'One bounded change',judge:'Existing test'},summary:'Change message',tasks:[{id:'change',agent:'chevron',title:'Change approved message',dependsOn:[],contract:{delivery:'Updated message',format:'Source diff',trigger:'Approved text',validation:'Existing test'}}]})};};
+ await e.start(r);assert.equal(r.status,'awaiting_plan');assert.equal(calls,1);assert.equal(r.architecture.type,'single');assert.equal(r.plan.tasks.length,1);assert.deepEqual(r.proposals,[]);
+});

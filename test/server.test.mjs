@@ -24,6 +24,7 @@ test('HTTP demo lifecycle, persistence, approval guards and origin checks',async
  try{
   await start();
   assert.equal((await fetch(base+'/')).status,200);
+  const cases=await (await fetch(base+'/api/cases')).json();assert.equal(cases.length,6);assert.equal(cases[5].architecture,'single');
   assert.equal((await fetch(base+'/api/config',{headers:{Origin:'https://evil.example'}})).status,403);
   assert.equal((await post('/api/runs',{mode:'live',prompt:'build'})).status,400);
   const created=await post('/api/runs',{mode:'demo',prompt:'Health'});assert.equal(created.status,201);const {id}=await created.json();
