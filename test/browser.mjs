@@ -18,6 +18,8 @@ try{
  await page.locator('#agents .avatar-shell').first().waitFor();
  assert.equal(await page.locator('#agents .avatar-canvas').count(),5);await page.locator('#agents .has-webgl').first().waitFor();assert.equal(await page.locator('#agents .has-webgl').count(),5);
  assert.equal(await page.locator('#visual-metrics .metric-card').count(),4);
+ await page.locator('#case-gallery .case-card').last().waitFor();assert.equal(await page.locator('#case-gallery .case-card').count(),6);assert.equal(await page.locator('#case-gallery svg[role=img]').count(),6);
+ await page.getByRole('button',{name:'Explorar caso 2',exact:true}).click();await page.locator('#stage-scene[data-architecture=supervisor]').waitFor();assert.match(await page.locator('#architecture-decision').innerText(),/PRÉVIA DIDÁTICA/);await page.locator('#exercise-case').selectOption('');
  await mkdir('.studio/screenshots',{recursive:true});
  await page.screenshot({path:'.studio/screenshots/welcome.png',fullPage:true});
  const types=['pipeline','supervisor','hierarchical','pipeline','network','single'];
