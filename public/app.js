@@ -1,3 +1,4 @@
+import {renderCaseGallery} from './case-gallery.js';
 import {renderStage} from './stage-view.js';
 import {agentActivity,casePreview} from './stage-model.js';
 import {mount3D} from './mascot3d.js';
@@ -119,6 +120,7 @@ const studio=setupStudio({api,notify,onConfig:config=>{agents=config.agents;$('#
   const cases=await api('/api/cases');
   for(const c of cases){const option=el('option','',c.title);option.value=c.id;$('#exercise-case').append(option);}
   $('#exercise-case').onchange=()=>{const c=cases.find(c=>c.id===$('#exercise-case').value);const preview=$('#case-preview');preview.replaceChildren();previewRun=c?casePreview(c,agents):null;if(!c){render();return;}$('#prompt').value=c.prompt;const names={single:'Agente único',pipeline:'Esteira',supervisor:'Supervisor',hierarchical:'Hierárquica',network:'Rede'};preview.append(el('p','','Referência didática: '+names[c.architecture]),el('p','','Validação: '+c.judge),el('p','','O planejador analisa o pedido e justifica sua escolha. Nenhuma auditoria ou teste foi executado nesta prévia.'));if(!$('#mode').options[1].disabled){$('#mode').value='live';$('#mode').onchange();}render();};
+  renderCaseGallery($('#case-gallery'),cases,c=>{$('#exercise-case').value=c.id;$('#exercise-case').dispatchEvent(new Event('change'));document.querySelector('.stage-panel').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});});
   const events=new EventSource('/api/events');
   events.onopen=()=>{online=true;$('#connection').textContent='Conectado';refresh().catch(notify);};
   events.onerror=()=>{online=false;$('#connection').textContent='Reconectando';$('#submit').disabled=true;};

@@ -188,3 +188,7 @@ O palco organiza os personagens 3D conforme a arquitetura do plano. Exibe justif
 O seletor dos seis casos oferece prévias visuais sem chamadas a modelos, claramente marcadas. Clique num personagem para inspecionar tarefas, contratos e resultados. Planejamento, execução, validação, revisão, espera, bloqueio e conclusão possuem indicadores distintos; movimento reduzido e pausa são respeitados. Em telas pequenas, somente o palco permite rolagem horizontal.
 
 A organização espacial, os estados visíveis e a inspeção foram inspirados na [Muvuca](https://github.com/Silly-Machine/muvuca). O código do palco e os personagens 3D são próprios; não foram copiados os personagens ou assets da referência.
+
+## Galeria dos seis casos
+
+Na abertura, os seis casos aparecem simultaneamente em cartões acima do palco. Cada cartão inclui a identificação do caso, arquitetura recomendada para o enunciado, diagrama conceitual, justificativa e critério de validação. **Explorar caso** abre a prévia correspondente no palco sem chamar modelos. Em telas pequenas, os cartões são empilhados; não é necessário abrir o seletor para descobrir os casos.
