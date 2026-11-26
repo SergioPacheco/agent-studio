@@ -34,17 +34,17 @@ export function mount3D(canvas,agent){
   const moving=!paused&&!reduced.matches&&!document.body.classList.contains('motion-paused'),t=moving?now/1000:0;
   const rect=canvas.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,2),w=Math.max(1,Math.round(rect.width*dpr)),h=Math.max(1,Math.round(rect.height*dpr));if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}gl.viewport(0,0,w,h);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(program);
   const vp=mul(perspective(w/h),mul(translation(0,-.1,-6.4),rotation('x',.05)));gl.uniformMatrix4fv(uniforms.vp,false,vp);
-  const active=state==='working',bob=moving?Math.sin(t*(active?5:1.5))*(active?.075:.025):0;
-  const root=mul(translation(0,bob,0),rotation('y',yaw+(moving?Math.sin(t*.65)*.04:0))),c=color(colorHex),dark=[.055,.065,.11],light=c.map(x=>Math.min(1,x*.6+.4));
+  const active=['working','planning','reviewing','checking'].includes(state),thinking=state==='planning',checking=['reviewing','checking'].includes(state),waiting=state==='waiting',bob=moving?Math.sin(t*(thinking?2:checking?3:active?5:1.5))*(active?.075:.025):0;
+  const root=mul(translation(0,bob,0),rotation('y',yaw+(moving?Math.sin(t*(thinking?1.3:.65))*(thinking?.14:.04):0))),c=color(colorHex),dark=[.055,.065,.11],light=c.map(x=>Math.min(1,x*.6+.4));
   drawPart(root,[0,-.48,0],[1.02,.7,.78],c);
   drawPart(root,[0,.45,0],[1.58,1.28,.97],c,visual==='scout'?1:0);
   drawPart(root,[0,.47,.49],[1.31,.7,.12],dark);
   const blink=moving&&Math.sin(t*1.1)>.997?.04:.2;
-  for(const x of [-.35,.35])drawPart(root,[x,.54,.59],[.14,blink,.1],state==='error'?[1,.25,.3]:light,1,0,.8);
+  for(const x of [-.35,.35])drawPart(root,[x,.54,.59],[.14,state==='done'?.09:blink,.1],state==='error'?[1,.25,.3]:checking?[.5,1,.92]:waiting?[1,.82,.4]:light,1,0,.8);
   drawPart(root,[0,.23,.585],[.22,.045,.06],light,0,0,.5);
   for(const x of [-.32,.32]){drawPart(root,[x,-1.02,0],[.23,.48,.25],c,0,active&&moving?Math.sin(t*5+x)*.08:0);drawPart(root,[x,-1.29,.12],[.42,.18,.6],light);}
   for(const sign of [-1,1]){
-   const armRoot=mul(root,mul(translation(sign*.75,-.16,0),rotation('z',sign*(active&&moving?.25+Math.sin(t*6)*.25:.12))));
+   const armRoot=mul(root,mul(translation(sign*.75,-.16,0),rotation('z',sign*(waiting?.6:active&&moving?.25+Math.sin(t*(thinking?2:6))*.25:.12))));
    drawPart(armRoot,[0,-.23,0],[.25,.62,.28],c);drawPart(armRoot,[0,-.56,.04],[.32,.27,.36],light,1);
   }
   drawPart(root,[0,-.48,.42],[.48,.17,.08],dark);drawPart(root,[-.12,-.48,.48],[.09,.09,.06],state==='error'?[1,.2,.2]:[.4,1,.7],1,0,1);

@@ -1,3 +1,5 @@
+import {renderArchitectureMap} from './stage-view.js';
+import {agentActivity} from './stage-model.js';
 const NS='http://www.w3.org/2000/svg';
 function node(tag,attrs={},text){const n=document.createElementNS(NS,tag);for(const [k,v] of Object.entries(attrs))n.setAttribute(k,String(v));if(text!==undefined)n.textContent=text;return n;}
 function html(tag,cls,text){const n=document.createElement(tag);n.className=cls;if(text!==undefined)n.textContent=text;return n;}
@@ -49,33 +51,9 @@ export function summarize(run,agents){
  return {events,counts,links:[...links.values()],tasks,completed,files:Object.keys(run?.files||{}).length};
 }
 
-const coords={maestro:[300,59],chevron:[65,188],pixel:[220,188],scout:[380,188],revisor:[535,188]};
-function curve(from,to){const [x,y]=coords[from],[a,b]=coords[to];return `M${x} ${y} Q${(x+a)/2} ${(y+b)/2-43} ${a} ${b}`;}
-function graph(root,run,agents,data,selected,onSelect){
- const lead=agents.find(a=>a.kind==='coordinator')||agents.find(a=>a.id==='maestro')||agents[0];const peers=agents.filter(a=>a.id!==lead.id);coords[lead.id]=[300,50];for(const [i,a] of peers.entries())coords[a.id]=[[65,220,380,535][i%4],178+Math.floor(i/4)*110];
- const height=80+Math.ceil(peers.length/4)*110+55;
- const svg=node('svg',{viewBox:'0 0 600 '+height,role:'img','aria-label':'Grafo de mudanças de responsável observadas no histórico',class:'team-graph'});
- svg.append(node('title',{},'Conexões representam mudanças de responsável entre eventos consecutivos, não mensagens diretas entre agentes.'));
- const defs=node('defs'),marker=node('marker',{id:'graph-arrow',viewBox:'0 0 10 10',refX:28,refY:5,markerWidth:5,markerHeight:5,orient:'auto-start-reverse'});marker.append(node('path',{d:'M0 0 10 5 0 10Z',fill:'#b7a2fa'}));defs.append(marker);svg.append(defs);
- const base=node('g',{'aria-hidden':'true'});
- for(const a of agents.filter(a=>a.id!==lead.id))base.append(node('path',{d:curve(lead.id,a.id),class:'graph-base'}));svg.append(base);
- const last=data.events.at(-1),prev=data.events.slice(0,-1).reverse().find(e=>e.agent!==last?.agent);
- const active=['planning','executing','reviewing','testing'].includes(run?.status);
- for(const link of data.links){
-  const live=active&&run?.agents[last?.agent]==='working'&&last?.agent===link.to&&prev?.agent===link.from;
-  const p=node('path',{d:curve(link.from,link.to),class:'graph-edge'+(live?' live':''),'marker-end':'url(#graph-arrow)','data-from':link.from,'data-to':link.to});
-  p.append(node('title',{},`${link.from} → ${link.to}: ${link.count} mudança(s) de responsável`));svg.append(p);
- }
- for(const a of agents){const [x,y]=coords[a.id];const g=node('g',{transform:`translate(${x},${y})`,class:'graph-node'+(selected===a.id?' selected':''),tabindex:0,role:'button','aria-label':'Inspecionar '+a.name});
-  g.append(node('circle',{r:26,class:'graph-node-ring'}),node('circle',{r:21,fill:a.color,'fill-opacity':'.14',stroke:a.color,'stroke-opacity':'.5'}),node('text',{'text-anchor':'middle',y:6,fill:a.color,'font-size':19},a.icon),node('text',{'text-anchor':'middle',y:41,class:'graph-name'},a.name));
-  if(run?.agents[a.id]==='working'&&active)g.classList.add('working');g.addEventListener('click',()=>onSelect(a.id));g.addEventListener('keydown',e=>{if(['Enter',' '].includes(e.key)){e.preventDefault();onSelect(a.id);}});svg.append(g);
- }
- root.replaceChildren(svg);
-}
-
 export function renderDashboard(run,agents,selected,onSelect){
  const data=summarize(run,agents),root=document.querySelector('#graph');if(!root)return;
- graph(root,run,agents,data,selected,onSelect);
+ renderArchitectureMap(root,run,agents,selected,onSelect);
  const metrics=document.querySelector('#visual-metrics');metrics.replaceChildren();
  for(const [value,label] of [[data.files,'Arquivos preparados'],[data.events.length,'Eventos registrados'],[run?.usage?.calls||0,'Chamadas ao modelo'],[run?.usage?.calls&& !run?.usage?.tokens?'—':run?.usage?.tokens||0,'Tokens informados']]){
   const card=html('div','metric-card');card.append(html('b','',String(value)),html('span','',label));metrics.append(card);
@@ -92,6 +70,9 @@ export function renderDashboard(run,agents,selected,onSelect){
  const done=run?.phases||[];
  for(const [id,label] of [['plan','Plano'],['execution','Execução'],['review','Revisão'],['approval','Aprovação'],['tests','Testes']]){const step=html('div','pipeline-step'+(done.includes(id)?' complete':''));step.append(html('span','',done.includes(id)?'✓':'·'),html('b','',label));pipeline.append(step);}
  const inspector=document.querySelector('#agent-inspector');inspector.replaceChildren();const a=agents.find(a=>a.id===selected)||agents[0];if(!a)return;
+ const activity=agentActivity(run,a),own=data.tasks.filter(t=>t.agent===a.id);
+ inspector.append(html('p','inspector-status',activity.label));
+ for(const task of own){const box=html('details','inspector-task');box.open=task.status==='working';box.append(html('summary','',task.title));box.append(html('p','','Dependências: '+((task.dependsOn||[]).join(', ')||'nenhuma')));if(task.contract)for(const [key,label] of [['delivery','Entrega'],['format','Formato'],['trigger','Gatilho'],['validation','Validação']])box.append(html('p','',label+': '+task.contract[key]));if(task.output)box.append(html('pre','',task.output));inspector.append(box);}
  const events=data.events.filter(e=>e.agent===a.id);const heading=html('div','inspector-title');heading.append(html('b','',a.name),html('span','',a.role));inspector.append(heading);
  if(!events.length)inspector.append(html('p','inspector-empty','Nenhuma atividade registrada para este especialista.'));
  for(const event of events.slice(-3).reverse()){const item=html('div','inspector-event');item.append(html('time','',new Date(event.time).toLocaleTimeString()),html('p','',event.message));inspector.append(item);}

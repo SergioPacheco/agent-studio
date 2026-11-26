@@ -59,7 +59,7 @@ const engine=new Engine({persist,router,runner,requestCommand:async(r,agent,args
 }});
 function json(res,status,data){res.writeHead(status,{'Content-Type':'application/json; charset=utf-8'});res.end(JSON.stringify(data));}
 async function body(req,max=100000){let s='';for await(const c of req){s+=c;if(Buffer.byteLength(s)>max)throw new Error('Pedido excede o limite.');}return JSON.parse(s||'{}');}
-const assets={'/':['index.html','text/html'],'/app.js':['app.js','text/javascript'],'/visuals.js':['visuals.js','text/javascript'],'/mascot3d.js':['mascot3d.js','text/javascript'],'/studio.js':['studio.js','text/javascript'],'/style.css':['style.css','text/css']};
+const assets={'/stage-model.js':['stage-model.js','text/javascript'],'/stage-view.js':['stage-view.js','text/javascript'],'/':['index.html','text/html'],'/app.js':['app.js','text/javascript'],'/visuals.js':['visuals.js','text/javascript'],'/mascot3d.js':['mascot3d.js','text/javascript'],'/studio.js':['studio.js','text/javascript'],'/style.css':['style.css','text/css']};
 function equalToken(a,b){const x=Buffer.from(a||''),y=Buffer.from(b||'');return x.length===y.length&&timingSafeEqual(x,y);}
 function authenticated(req){if(!process.env.STUDIO_AUTH_TOKEN)return true;if(equalToken(req.headers.authorization,'Bearer '+process.env.STUDIO_AUTH_TOKEN))return true;const token=(req.headers.cookie||'').split(';').map(x=>x.trim()).find(x=>x.startsWith('studio_session='))?.slice(15);return !!token&&(sessions.get(token)||0)>Date.now();}
 const server=http.createServer(async(req,res)=>{
