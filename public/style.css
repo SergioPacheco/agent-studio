@@ -34,3 +34,4 @@ body.motion-paused *,body.motion-paused *::before,body.motion-paused *::after{an
 @media(prefers-reduced-motion:reduce){.agent.planning .robot-body{animation:none!important}}
 .motion-paused .agent.planning .robot-body{animation:none!important}
 .preview-return{margin:0 22px 12px;font-size:10px;color:#d6c0f0;background:#302439}
+@media(max-width:600px){.stage-legend::after{content:' · Deslize o palco para ver o restante do time.';color:#c9b3e0}}
