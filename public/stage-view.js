@@ -1,0 +1,32 @@
+import {stageModel} from './stage-model.js';
+const NS='http://www.w3.org/2000/svg';
+const svgEl=(tag,attrs={},text)=>{const n=document.createElementNS(NS,tag);for(const [k,v] of Object.entries(attrs))n.setAttribute(k,String(v));if(text!==undefined)n.textContent=text;return n;};
+const el=(tag,cls,text)=>{const n=document.createElement(tag);n.className=cls;if(text!==undefined)n.textContent=text;return n;};
+function pathFor(a,b,offset){
+ const y=a.y+offset,z=b.y+offset;
+ if(a.id===b.id)return `M${a.x+65} ${y} C${a.x+175} ${y-70},${a.x+175} ${y+80},${a.x+65} ${y+45}`;
+ const dx=b.x-a.x,dy=z-y,len=Math.hypot(dx,dy)||1,r=60,x1=a.x+dx/len*r,y1=y+dy/len*45,x2=b.x-dx/len*r,y2=z-dy/len*45;
+ return `M${x1} ${y1} Q${(x1+x2)/2+Math.sign(dy)*25} ${(y1+y2)/2-25} ${x2} ${y2}`;
+}
+function drawLinks(svg,model,prefix,offset,labels){
+ const defs=svgEl('defs'),marker=svgEl('marker',{id:prefix+'-arrow',viewBox:'0 0 10 10',refX:8,refY:5,markerWidth:5,markerHeight:5,orient:'auto'});marker.append(svgEl('path',{d:'M0 0 10 5 0 10Z',fill:'#aa99ce'}));defs.append(marker);svg.append(defs);
+ for(const l of model.links){const a=model.nodes.find(n=>n.id===l.from),b=model.nodes.find(n=>n.id===l.to);const p=svgEl('path',{d:pathFor(a,b,offset),class:'graph-edge stage-edge '+l.kind+(l.live?' live':''),'marker-end':`url(#${prefix}-arrow)`,'data-from':l.from,'data-to':l.to});p.append(svgEl('title',{},l.label+(l.live?' · entrada disponível para tarefa em execução':' · conexão prevista')));svg.append(p);if(labels&&l.kind!=='assignment'){const text=svgEl('text',{x:a.id===b.id?a.x+135:(a.x+b.x)/2,y:a.id===b.id?a.y+offset-20:(a.y+b.y)/2+offset-20,'text-anchor':'middle',class:'stage-link-label'},l.label);svg.append(text);}}
+}
+export function renderArchitectureMap(root,run,agents,selected,onSelect){
+ const m=stageModel(run,agents),svg=svgEl('svg',{viewBox:`0 0 1000 ${m.height}`,class:'team-graph',role:'img','aria-label':m.label+' · dependências e papéis previstos'});svg.append(svgEl('title',{},'Conexões derivadas do plano; animação somente quando a entrada está liberada para uma tarefa em execução.'));drawLinks(svg,m,'overview',70,false);
+ for(const a of m.nodes){const g=svgEl('g',{transform:`translate(${a.x},${a.y+70})`,class:'graph-node '+a.state+(selected===a.id?' selected':''),tabindex:0,role:'button','aria-label':'Inspecionar '+a.name});g.append(svgEl('circle',{r:33,class:'graph-node-ring'}),svgEl('text',{'text-anchor':'middle',y:6,fill:a.color||'#b7a2fa','font-size':23},a.icon||'●'),svgEl('text',{'text-anchor':'middle',y:58,class:'graph-name'},a.name),svgEl('text',{'text-anchor':'middle',y:82,class:'graph-name'},a.label));g.onclick=()=>onSelect(a.id);g.onkeydown=e=>{if(['Enter',' '].includes(e.key)){e.preventDefault();onSelect(a.id);}};svg.append(g);}
+ root.replaceChildren(svg);
+}
+export function renderStage(run,agents){
+ const scene=document.querySelector('#stage-scene');if(!scene)return;
+ const m=stageModel(run,agents),svg=document.querySelector('#stage-links'),root=document.querySelector('#agents');
+ scene.style.height=m.height+'px';scene.dataset.architecture=m.type;root.style.height=m.height+'px';svg.setAttribute('viewBox',`0 0 1000 ${m.height}`);svg.replaceChildren();drawLinks(svg,m,'stage',95,true);
+ const old=scene.querySelector('.stage-groups');old?.remove();const groups=el('div','stage-groups');
+ for(const group of m.groups){const title=el('span','stage-domain',group.label);title.style.left=group.x/10+'%';title.style.top=group.y+'px';groups.append(title);}scene.append(groups);
+ for(const n of m.nodes){const card=[...root.children].find(c=>c.dataset.agent===n.id);if(!card)continue;card.style.left=n.x/10+'%';card.style.top=n.y+'px';card.classList.toggle('support-agent',n.support);card.dataset.activity=n.state;const role=card.querySelector('small');if(role){const domains=[...new Set((run?.plan?.tasks||[]).filter(t=>t.agent===n.id).map(t=>t.domain).filter(Boolean))];role.textContent=(domains.length?domains.join(' · '):n.role)+(n.support?' · apoio':'');}}
+ const decision=document.querySelector('#architecture-decision');decision.replaceChildren();const heading=el('div','architecture-title');heading.append(el('span','architecture-badge',!run?'Time disponível':m.preview?'PRÉVIA DIDÁTICA':run.status==='awaiting_plan'?'PROPOSTA PARA APROVAÇÃO':'ARQUITETURA DO PLANO'),el('h3','',!run?'Seu próximo time começa aqui':m.label));decision.append(heading,el('p','architecture-rationale',m.rationale));const details=el('details','architecture-details'),summary=el('summary','', 'Critérios e validação');details.append(summary,el('p','',m.judge));if(m.type==='hierarchical')details.append(el('p','','Frentes representam grupos de tarefas. Os personagens são os agentes cadastrados; não há subagentes recursivos.'));if(m.preview)details.append(el('p','','Nenhum modelo, teste ou auditoria foi executado. A escolha real pode mudar com os requisitos.'));else if(run?.status==='awaiting_plan')details.append(el('p','','Confira o plano antes de aprovar. Para mudar a organização, recuse e refine o pedido.'));decision.append(details);
+ const tasks=run?.plan?.tasks||[];if(tasks.length){const strip=el('ol','stage-task-strip');strip.setAttribute('aria-label','Etapas do plano');for(const task of tasks){const chip=el('li','task-chip '+(task.status||'pending'));chip.append(el('b','',task.title),el('span','',task.agent+(task.domain?' · '+task.domain:'')+(task.round?' · rodada '+task.round:'')));strip.append(chip);}decision.append(strip);}
+ const legend=document.querySelector('#stage-legend');legend.textContent=m.preview?'Prévia sem execução · escolha um caso para explorar':'Linhas tracejadas: fluxo previsto · linhas em movimento: entrada liberada para tarefa em execução';
+ const mapBadge=document.querySelector('.graph-panel .section-head h2 span');if(mapBadge)mapBadge.textContent=m.preview?'PRÉVIA':run?'PLANO':'TIME';const key=document.querySelector('.graph-key');if(key)key.textContent='Dependências e revisão';
+ const count=document.querySelector('.stage-panel .section-head h2 span');if(count)count.textContent=String(agents.length).padStart(2,'0');
+}

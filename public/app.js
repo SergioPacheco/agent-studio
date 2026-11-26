@@ -1,8 +1,10 @@
+import {renderStage} from './stage-view.js';
+import {agentActivity,casePreview} from './stage-model.js';
 import {mount3D} from './mascot3d.js';
 import {setupStudio} from './studio.js';
 import {createMascot,renderDashboard} from './visuals.js';
 const $=s=>document.querySelector(s);
-let agents=[],runs=[],current=null,tab='activity',online=false;
+let agents=[],runs=[],current=null,previewRun=null,tab='activity',online=false;
 function ingest(r){const old=runs.find(x=>x.id===r.id);if(old&&old.events.length>r.events.length)return old;const i=runs.findIndex(x=>x.id===r.id);if(i<0)runs.unshift(r);else runs[i]=r;return r;}
 const labels={planning:'Planejando',awaiting_plan:'Aprovar plano',executing:'Executando',reviewing:'Revisando',awaiting_files:'Aprovar arquivos',testing:'Testando',completed:'Concluído',test_failed:'Testes falharam',review_failed:'Revisão não aprovada',error:'Erro',cancelled:'Cancelado',interrupted:'Interrompido',awaiting_command:'Aprovar comando'};
 const states={idle:'Disponível',working:'Trabalhando',done:'Concluído',waiting:'Aguardando',error:'Atenção'};
@@ -12,7 +14,7 @@ function notify(e){$('#notice').textContent=e?.message||e||'';}
 let selectedAgent='maestro';const renderers=new Map(),selections=new Map();
 function changedFiles(){const before=current?.baseline||{},after=current?.files||{};return [...new Set([...Object.keys(before),...Object.keys(after)])].sort().filter(p=>before[p]!==after[p]);}
 function selectedFiles(){const key=current?.id+':'+current?.hash;if(!selections.has(key))selections.set(key,new Set(changedFiles()));return selections.get(key);}
-function selectAgent(id){selectedAgent=id;renderAgents();renderDashboard(current,agents,selectedAgent,selectAgent);}
+function selectAgent(id){selectedAgent=id;renderAgents();renderDashboard(previewRun||current,agents,selectedAgent,selectAgent);renderStage(previewRun||current,agents);}
 function renderAgents(){
  const root=$('#agents');
  for(const existing of root.querySelectorAll('[data-agent]'))if(!agents.some(a=>a.id===existing.dataset.agent)){renderers.get(existing.dataset.agent)?.dispose();renderers.delete(existing.dataset.agent);existing.remove();}
@@ -24,10 +26,10 @@ function renderAgents(){
    card.onclick=()=>selectAgent(a.id);root.append(card);
   }
   card.querySelector('b').textContent=a.name;card.querySelector('small').textContent=a.role;renderers.get(a.id)?.update(a);
-  const state=current?.agents[a.id]||'idle',last=current?.events.filter(e=>e.agent===a.id).at(-1);
+  const stageRun=previewRun||current,activity=agentActivity(stageRun,a),state=activity.state,last=stageRun?.events?.filter(e=>e.agent===a.id).at(-1);
   renderers.get(a.id)?.setState(state);card.className='agent '+state+(selectedAgent===a.id?' selected':'');card.setAttribute('aria-pressed',String(selectedAgent===a.id));
-  card.querySelector('.speech').textContent=last?(state==='working'?'Em ação: ':'')+last.message.slice(0,65):'Pronto para colaborar';
-  card.querySelector('.speech').title=last?.message||'Pronto para colaborar';card.querySelector('.agent-state').textContent=states[state];
+  card.querySelector('.speech').textContent=activity.task?activity.task.title.slice(0,65):last?last.message.slice(0,65):'Pronto para colaborar';
+  card.querySelector('.speech').title=last?.message||'Pronto para colaborar';card.querySelector('.agent-state').textContent=activity.label;
  }
 }
 
@@ -36,7 +38,7 @@ function renderHistory(){
  for(const r of runs){
   const b=el('button','history-item'+(r.id===current?.id?' current':''),r.prompt.slice(0,65));
   b.append(el('small','',(r.mode==='demo'?'DEMO':'IA')+' · '+(labels[r.status]||r.status)+' · '+new Date(r.createdAt).toLocaleDateString()));
-  b.onclick=()=>{current=r;notify('');render();};$('#history').append(b);
+  b.onclick=()=>{previewRun=null;current=r;notify('');render();};$('#history').append(b);
  }
 }
 async function action(name,payload={}){
@@ -44,7 +46,7 @@ async function action(name,payload={}){
  try{await api('/api/runs/'+id+'/'+name,{method:'POST',body:JSON.stringify(name==='approve-files'?{selectedFiles:[...selectedFiles()],confirmHostTest:!!$('#confirm-host-test')?.checked,...payload}:payload)});current=ingest(await api('/api/runs/'+id));notify('');if(name==='memory')await studio.refresh();render();return true;}catch(e){notify(e);buttons.forEach(b=>b.disabled=false);return false;}
 }
 function renderApproval(){
- const root=$('#approval');root.replaceChildren();
+ const root=$('#approval');root.replaceChildren();if(previewRun)return;
  if(!current)return;
  for(const pending of current.pendingActions||[]){if(pending.status!=='pending')continue;const box=el('div','approval command-approval');box.append(el('b','',pending.label),el('p','',pending.reason),el('pre','',JSON.stringify(pending.argv)+'\n'+pending.cwd+'\nImagem: '+pending.image));const yes=el('button','primary','Aprovar comando'),no=el('button','danger','Recusar comando');yes.onclick=()=>action('actions/'+pending.id,{approved:true});no.onclick=()=>action('actions/'+pending.id,{approved:false});box.append(yes,no);root.append(box);}
  let text,button,act;
@@ -59,7 +61,7 @@ function renderApproval(){
  }
 }
 function renderContent(){
- const root=$('#content');root.replaceChildren();
+ const root=$('#content');root.replaceChildren();if(previewRun){root.append(el('h3','','Prévia didática · nenhuma execução'));for(const t of previewRun.plan.tasks){const box=el('div','task',t.title);box.append(el('small','',t.agent+' · depende de: '+(t.dependsOn.join(', ')||'nenhuma')));root.append(box);}return;}
  if(!current){root.append(el('div','empty','As ideias começam aqui. Envie seu primeiro pedido.'));return;}
  if(tab==='activity'){
   for(const e of current.events){
@@ -92,18 +94,19 @@ function renderContent(){
  }
 }
 function render(){
- renderAgents();renderDashboard(current,agents,selectedAgent,selectAgent);renderHistory();renderApproval();renderContent();
- $('#status').textContent=current?(labels[current.status]||current.status):'Pronto para começar';
- $('#caption').textContent=current?(current.mode==='demo'?'Demonstração fixa · ':'IA conectada · ')+(labels[current.status]||current.status):'Uma equipe pronta para transformar seu próximo pedido em algo real.';
+ renderAgents();renderDashboard(previewRun||current,agents,selectedAgent,selectAgent);renderStage(previewRun||current,agents);renderHistory();renderApproval();renderContent();
+ $('#show-execution').hidden=!previewRun;$('#status').textContent=previewRun?'Prévia didática':current?(labels[current.status]||current.status):'Pronto para começar';
+ $('#caption').textContent=previewRun?'Prévia do caso selecionado · sem chamadas a modelos ou execução':current?(current.mode==='demo'?'Demonstração fixa · ':'IA conectada · ')+(labels[current.status]||current.status):'Uma equipe pronta para transformar seu próximo pedido em algo real.';
  if(current?.error)notify(current.error);studio?.onRun(current);
  $('#submit').disabled=!online||runs.some(r=>['planning','executing','awaiting_command','reviewing','testing'].includes(r.status));
 }
 async function refresh(){for(const r of await api('/api/runs'))ingest(r);runs.sort((a,b)=>b.createdAt.localeCompare(a.createdAt));if(current)current=runs.find(r=>r.id===current.id)||current;else current=runs[0]||null;render();}
 $('#request').onsubmit=async e=>{
  e.preventDefault();notify('');$('#submit').disabled=true;
- try{if($('#exercise-case').value&&$('#mode').value==='demo')throw new Error('Os casos são exemplos de planejamento. Configure IA conectada para executar; o demo health não executa estes casos.');const created=await api('/api/runs',{method:'POST',body:JSON.stringify({mode:$('#mode').value,prompt:$('#prompt').value,...studio.options()})});current=ingest(created);current=ingest(await api('/api/runs/'+created.id));tab='activity';document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('selected',b.dataset.tab===tab));render();}catch(e){notify(e);$('#submit').disabled=false;}
+ try{if($('#exercise-case').value&&$('#mode').value==='demo')throw new Error('Os casos são exemplos de planejamento. Configure IA conectada para executar; o demo health não executa estes casos.');const created=await api('/api/runs',{method:'POST',body:JSON.stringify({mode:$('#mode').value,prompt:$('#prompt').value,...studio.options()})});previewRun=null;current=ingest(created);current=ingest(await api('/api/runs/'+created.id));tab='activity';document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('selected',b.dataset.tab===tab));render();}catch(e){notify(e);$('#submit').disabled=false;}
 };
-$('#example').onclick=()=>{$('#exercise-case').value='';$('#case-preview').replaceChildren();$('#prompt').value='Crie um módulo health que retorne status ok, com documentação e teste.';};
+$('#show-execution').onclick=()=>{previewRun=null;render();};
+$('#example').onclick=()=>{previewRun=null;$('#exercise-case').value='';$('#case-preview').replaceChildren();$('#prompt').value='Crie um módulo health que retorne status ok, com documentação e teste.';render();};
 $('#mode').onchange=()=>$('#mode-note').textContent=$('#mode').value==='demo'?'Sem LLM: gera o exemplo health e executa um teste real. Seu pedido não altera o cenário.':'Pedido livre enviado ao provedor configurado. Os arquivos serão revisados e os testes gerados exigem Docker.';
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;document.querySelectorAll('[data-tab]').forEach(t=>t.classList.toggle('selected',t===b));renderContent();});
 $('#motion').onclick=()=>{const paused=document.body.classList.toggle('motion-paused');$('#motion').textContent=paused?'Ativar animações':'Pausar animações';$('#motion').setAttribute('aria-pressed',String(paused));};
@@ -115,7 +118,7 @@ const studio=setupStudio({api,notify,onConfig:config=>{agents=config.agents;$('#
   try{await studio.refresh();}catch(e){if(e.authenticationRequired){await studio.login();await studio.refresh();}else throw e;}
   const cases=await api('/api/cases');
   for(const c of cases){const option=el('option','',c.title);option.value=c.id;$('#exercise-case').append(option);}
-  $('#exercise-case').onchange=()=>{const c=cases.find(c=>c.id===$('#exercise-case').value);const preview=$('#case-preview');preview.replaceChildren();if(!c)return;$('#prompt').value=c.prompt;const names={single:'Agente único',pipeline:'Esteira',supervisor:'Supervisor',hierarchical:'Hierárquica',network:'Rede'};preview.append(el('p','','Referência didática: '+names[c.architecture]),el('p','','Validação: '+c.judge),el('p','','O planejador analisa o pedido e justifica sua escolha. Nenhuma auditoria ou teste foi executado nesta prévia.'));if(!$('#mode').options[1].disabled){$('#mode').value='live';$('#mode').onchange();}};
+  $('#exercise-case').onchange=()=>{const c=cases.find(c=>c.id===$('#exercise-case').value);const preview=$('#case-preview');preview.replaceChildren();previewRun=c?casePreview(c,agents):null;if(!c){render();return;}$('#prompt').value=c.prompt;const names={single:'Agente único',pipeline:'Esteira',supervisor:'Supervisor',hierarchical:'Hierárquica',network:'Rede'};preview.append(el('p','','Referência didática: '+names[c.architecture]),el('p','','Validação: '+c.judge),el('p','','O planejador analisa o pedido e justifica sua escolha. Nenhuma auditoria ou teste foi executado nesta prévia.'));if(!$('#mode').options[1].disabled){$('#mode').value='live';$('#mode').onchange();}render();};
   const events=new EventSource('/api/events');
   events.onopen=()=>{online=true;$('#connection').textContent='Conectado';refresh().catch(notify);};
   events.onerror=()=>{online=false;$('#connection').textContent='Reconectando';$('#submit').disabled=true;};

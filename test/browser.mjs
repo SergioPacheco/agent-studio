@@ -20,6 +20,11 @@ try{
  assert.equal(await page.locator('#visual-metrics .metric-card').count(),4);
  await mkdir('.studio/screenshots',{recursive:true});
  await page.screenshot({path:'.studio/screenshots/welcome.png',fullPage:true});
+ const types=['pipeline','supervisor','hierarchical','pipeline','network','single'];
+ for(let i=0;i<6;i++){await page.locator('#exercise-case').selectOption('case-'+(i+1));await page.locator('#stage-scene[data-architecture="'+types[i]+'"]').waitFor();assert.match(await page.locator('#architecture-decision').innerText(),/PRÉVIA DIDÁTICA/);assert.equal(await page.locator('#stage-links .live').count(),0);assert.ok(await page.locator('.stage-task-strip li').count()>0);await page.screenshot({path:'.studio/screenshots/case-'+(i+1)+'.png',fullPage:true});}
+ await page.locator('#agents [data-agent=chevron]').click();assert.ok(await page.locator('#agent-inspector .inspector-task').count()>0);
+ await page.setViewportSize({width:390,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'Architecture stage stays within mobile viewport');await page.screenshot({path:'.studio/screenshots/case-mobile.png',fullPage:true});await page.setViewportSize({width:1440,height:1000});
+ await page.locator('#exercise-case').selectOption('');
  await page.getByRole('button',{name:'Pausar animações'}).click();
  assert.equal(await page.locator('body').getAttribute('class'),'motion-paused');
  await page.getByRole('button',{name:'Ativar animações'}).click();
@@ -35,6 +40,7 @@ try{
  await page.getByRole('tab',{name:'Testes',exact:true}).click();
  await page.getByText('✓ Testes passaram',{exact:true}).waitFor();
  assert.equal(await page.locator('#task-progress .ring-label').textContent(),'2/2');
+ await page.locator('#exercise-case').selectOption('case-5');await page.locator('#stage-scene[data-architecture=network]').waitFor();assert.match(await page.locator('#architecture-decision').innerText(),/PRÉVIA DIDÁTICA/);assert.equal(await page.locator('#approval button').count(),0);await page.locator('#show-execution').click();await page.locator('#stage-scene[data-architecture=supervisor]').waitFor();
  assert.equal(await page.locator('#visual-metrics .metric-card b').first().textContent(),'3');
  assert.ok(await page.locator('#graph .graph-edge').count()>0);
  assert.equal(await page.locator('.pipeline-step.complete').count(),5);

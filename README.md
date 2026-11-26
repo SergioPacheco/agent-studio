@@ -180,3 +180,11 @@ Em **IA conectada**, o planejador escolhe e justifica a arquitetura a partir do 
 - Rede: propostas/críticas em 1–3 rodadas; cada rodada depende de todas as tarefas anteriores; revisor externo recebe o registro completo.
 
 São casos de planejamento, não seis aplicações prontas. Para executar trabalho real, forneça os arquivos e requisitos e configure provedores. O projeto ainda utiliza um snapshot por execução: auditoria multi-repositório requer disponibilizar os arquivos dentro dos limites existentes. Testes automáticos de integração usam provedores simulados; não demonstram qualidade das escolhas de um modelo real.
+
+## Palco adaptativo e acompanhamento
+
+O palco organiza os personagens 3D conforme a arquitetura do plano. Exibe justificativa, critério de validação e etapas; agentes de apoio ficam identificados. Hierarquia mostra frentes de tarefas, sem inventar subagentes. As conexões vêm das dependências explícitas, distribuição e revisão previstas. Animação indica entrada disponível para uma tarefa em execução, não prova de uma mensagem entre modelos. Eventos consecutivos do histórico não geram conexões.
+
+O seletor dos seis casos oferece prévias visuais sem chamadas a modelos, claramente marcadas. Clique num personagem para inspecionar tarefas, contratos e resultados. Planejamento, execução, validação, revisão, espera, bloqueio e conclusão possuem indicadores distintos; movimento reduzido e pausa são respeitados. Em telas pequenas, somente o palco permite rolagem horizontal.
+
+A organização espacial, os estados visíveis e a inspeção foram inspirados na [Muvuca](https://github.com/Silly-Machine/muvuca). O código do palco e os personagens 3D são próprios; não foram copiados os personagens ou assets da referência.
